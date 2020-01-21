@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ChoiseWork.SetComplete">
+
+    <TextView
+        android:id="@+id/previousAction"
+        android:layout_width="306dp"
+        android:layout_height="42dp"
+        android:gravity="center"
+        android:textColor="#070AA0"
+        android:textSize="18sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.065" />
+
+    <TextView
+        android:id="@+id/mainView"
+        android:layout_width="247dp"
+        android:layout_height="117dp"
+        android:layout_marginTop="220dp"
+        android:gravity="center"
+        android:text="Отсканируйте ШК предкомплектации!"
+        android:textColor="#FF0000"
+        android:textSize="24sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <EditText
+        android:id="@+id/enterCountPlace"
+        android:layout_width="119dp"
+        android:layout_height="42dp"
+        android:layout_marginTop="348dp"
+        android:ems="10"
+        android:inputType="number"
+        android:visibility="invisible"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/FExcStr"
+        android:layout_width="275dp"
+        android:layout_height="127dp"
+        android:layout_marginTop="396dp"
+        android:gravity="center"
+        android:text="Отсканируйте принтер"
+        android:textColor="#070AA0"
+        android:textSize="24sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.51"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/printer"
+        android:layout_width="233dp"
+        android:layout_height="37dp"
+        android:layout_marginTop="100dp"
+        android:gravity="center"
+        android:text="'принтер не выбран'"
+        android:textColor="#0B7215"
+        android:textSize="18sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/DocView"
+        android:layout_width="151dp"
+        android:layout_height="33dp"
+        android:layout_marginTop="160dp"
+        android:gravity="center"
+        android:textColor="#070AA0"
+        android:textSize="20sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>
