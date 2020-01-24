@@ -76,13 +76,13 @@ class Helper {
     /// <returns></returns>
     fun DisassembleBarcode (Barcode: String): MutableMap<String,String>
     {
-        var bigInteger: BigInteger // для перевода в др сс              //!!! Проверить все substring!!!
+        var bigInteger: BigInteger // для перевода в др сс
         var result: MutableMap<String,String>  = mutableMapOf()
         result["Type"]  = "999"    //Код ошибки
         if (Barcode.length == 18)
         {
             result["Type"]  = "118"
-            result["IDD"]   = "9999" + Barcode.substring(5, 13)
+            result["IDD"]   = "9999" + Barcode.substring(5, 18)
         }
         else if (Barcode.length == 13)
         {
@@ -94,7 +94,7 @@ class Helper {
                 var encodedID: String   = bigInteger.toString(36)
                 encodedID = "      $encodedID"
                 encodedID = encodedID.substring(encodedID.length - 6) + "   "
-                result["ID"] = encodedID
+                result["ID"] = encodedID.toUpperCase()
             }
             else if (Barcode.substring(0, 9) == "259000000")
             {
@@ -104,7 +104,7 @@ class Helper {
             else if (Barcode.substring(0, 4) == "2580")
             {
                 result["Type"] = "pallete"
-                result["number"] = Barcode.substring(4, 8)
+                result["number"] = Barcode.substring(4, 12)
             }
             else
             {
@@ -115,22 +115,29 @@ class Helper {
         else
         {
             //128-Code (поехали, будем образать задние разряды полсе их обработки
-//            var binaryBar: String = "00000" + Translation.DecTo2(Translation._36ToDec(Barcode))
-//            //Последние пять разрядов - тип
-//            val type: String = Translation._2ToDec(binaryBar.Substring(binaryBar.Length - 6)).ToString();
-//            if (type == "5")
-//            {
-//                result["Type"]      = type
-//                //В следующие 34 разряда - закодированный ИДД документа
-//                binaryBar              = binaryBar.substring(0, binaryBar.length - 6)
-//                var encodedIDD: String = Translation._2ToDec(binaryBar.substring(binaryBar.length - 34)).ToString()
-//                encodedIDD          = "000000000$encodedIDD"
-//                encodedIDD          = encodedIDD.substring(encodedIDD.length - 10) //получаем 10 правых символов
-//                result["IDD"]       = "99990" + encodedIDD.substring(0, 2) + "00" + encodedIDD.substring(2)
-//                //В следующих 20 разрядах кроется строка документа (вот так с запасом взял)
-//                binaryBar           = "0000000000000000000" + binaryBar.Substring(0, binaryBar.Length - 34)
-//                result["LineNo"]    = Translation._2ToDec(binaryBar.Substring(binaryBar.Length - 20)).ToString()
-//            }
+            try{
+            bigInteger = Barcode.toBigInteger()
+            var firstChange: String   = bigInteger.toString(10)
+            var binaryBar: String = "00000" + firstChange.toBigInteger().toString(2)
+            //Последние пять разрядов - тип
+            val type: String = binaryBar.substring(binaryBar.length - 6).toBigInteger().toString(10).toString()
+            if (type == "5")
+            {
+                result["Type"]      = type
+                //В следующие 34 разряда - закодированный ИДД документа
+                binaryBar              = binaryBar.substring(0, binaryBar.length - 6)
+                var encodedIDD: String = binaryBar.substring(binaryBar.length - 34).toBigInteger().toString(10).toString()
+                encodedIDD          = "000000000$encodedIDD"
+                encodedIDD          = encodedIDD.substring(encodedIDD.length - 10) //получаем 10 правых символов
+                result["IDD"]       = "99990" + encodedIDD.substring(0, 2) + "00" + encodedIDD.substring(2)
+                //В следующих 20 разрядах кроется строка документа (вот так с запасом взял)
+                binaryBar           = "0000000000000000000" + binaryBar.substring(0, binaryBar.length - 34)
+                result["LineNo"]    = binaryBar.substring(binaryBar.length - 20).toBigInteger().toString(10).toString()
+                }
+            }
+            catch (e: Exception){
+                result["IDD"] = ""
+            }
         }
         return result
     }

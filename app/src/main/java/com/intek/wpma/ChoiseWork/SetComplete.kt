@@ -12,6 +12,7 @@ import android.util.Log
 import android.util.Printer
 import android.view.KeyEvent
 import android.view.View
+import android.widget.Toast
 import com.intek.wpma.BarcodeDataReceiver
 import com.intek.wpma.ChoiseWork.Set.SetInitialization
 import com.intek.wpma.MainActivity
@@ -85,6 +86,8 @@ class SetComplete : BarcodeDataReceiver() {
                     val count = enterCountPlace.text.toString().toInt()
                     Places = count
                     enterCountPlace.visibility = View.INVISIBLE
+                    countPlace.text = "Колво мест: $Places"
+                    countPlace.visibility = View.VISIBLE
                     FExcStr.text = "Ожидание команды"
                 }
                 catch (e: Exception){
@@ -172,15 +175,21 @@ class SetComplete : BarcodeDataReceiver() {
         FExcStr.text = DataMapRead["Спр.СинхронизацияДанных.ДатаРез1"].toString()
 
         //вернемся обратно в SetInitialization
-        val SetInitialization = Intent(this, SetInitialization::class.java)
-        SetInitialization.putExtra("Employer", Employer)
-        SetInitialization.putExtra("EmployerIDD",EmployerIDD)
-        SetInitialization.putExtra("EmployerFlags",EmployerFlags)
-        SetInitialization.putExtra("EmployerID",EmployerID)
-        SetInitialization.putExtra("PrinterPath",PrinterPath)
-        SetInitialization.putExtra("ParentForm","SetComplete")
-        startActivity(SetInitialization)
-        finish()
+        try {
+            val SetInitialization = Intent(this, SetInitialization::class.java)
+            SetInitialization.putExtra("Employer", Employer)
+            SetInitialization.putExtra("EmployerIDD", EmployerIDD)
+            SetInitialization.putExtra("EmployerFlags", EmployerFlags)
+            SetInitialization.putExtra("EmployerID", EmployerID)
+            SetInitialization.putExtra("PrinterPath", PrinterPath)
+            SetInitialization.putExtra("ParentForm", "SetComplete")
+            startActivity(SetInitialization)
+            finish()
+        }
+        catch(e: Exception) {
+            val toast = Toast.makeText(applicationContext, e.toString(), Toast.LENGTH_SHORT)
+            toast.show()
+        }
 
         return true
     }
@@ -199,6 +208,8 @@ class SetComplete : BarcodeDataReceiver() {
                     val count = enterCountPlace.text.toString().toInt()
                     Places = count
                     enterCountPlace.visibility = View.INVISIBLE
+                    countPlace.text = "Колво мест: $Places"
+                    countPlace.visibility = View.VISIBLE
                     FExcStr.text = "Ожидание команды"
                 }
                 catch (e: Exception){

@@ -21,14 +21,15 @@
 
     <TextView
         android:id="@+id/mainView"
-        android:layout_width="247dp"
-        android:layout_height="117dp"
-        android:layout_marginTop="220dp"
+        android:layout_width="228dp"
+        android:layout_height="91dp"
+        android:layout_marginTop="204dp"
         android:gravity="center"
         android:text="Отсканируйте ШК предкомплектации!"
         android:textColor="#FF0000"
         android:textSize="24sp"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.521"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -80,6 +81,20 @@
         android:textColor="#070AA0"
         android:textSize="20sp"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/countPlace"
+        android:layout_width="119dp"
+        android:layout_height="35dp"
+        android:layout_marginTop="304dp"
+        android:gravity="center"
+        android:textColor="#000000"
+        android:textSize="18sp"
+        android:visibility="invisible"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.502"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 

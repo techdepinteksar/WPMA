@@ -15,6 +15,7 @@ import android.view.View.INVISIBLE
 import android.view.View.VISIBLE
 import android.widget.EditText
 import android.widget.TextView
+import android.widget.Toast
 import androidx.core.view.isVisible
 import com.intek.wpma.*
 import com.intek.wpma.ChoiseWork.SetComplete
@@ -63,10 +64,14 @@ class SetInitialization : BarcodeDataReceiver() {
                 val version = intent.getIntExtra("version", 0)
                 if (version >= 1) {
                     // ту прописываем что делать при событии сканирования
-
-                    Barcode = intent.getStringExtra("data")
-                    reactionBarcode(Barcode)
-
+                    try {
+                        Barcode = intent.getStringExtra("data")
+                        reactionBarcode(Barcode)
+                    }
+                    catch(e: Exception) {
+                        val toast = Toast.makeText(applicationContext, "Не удалось отсканировать штрихкод!", Toast.LENGTH_LONG)
+                        toast.show()
+                    }
                 }
             }
         }
@@ -85,26 +90,36 @@ class SetInitialization : BarcodeDataReceiver() {
             ToModeSetInicialization()
         }
         else if (ParentForm == "Correct" || ParentForm == "WatchTablePart"){
-            PreviousAction.text = intent.extras!!.getString("PreviousAction")!!
-            PrinterPath = intent.extras!!.getString("PrinterPath")!!
-            //получим незаконченные задания по отбору
-            GetDocsSet()
-            //сообразим с какими параметрами нужно вызвать ToModeSet
-            val DocSetID = intent.extras!!.getString("DocSetID")!!
-            val AddressID = intent.extras!!.getString("AddressID")!!
-            if ((DocSetID != "") && (AddressID == "")){
-                ToModeSet(null, DocSetID)
+            try {
+                PreviousAction.text = intent.extras!!.getString("PreviousAction")!!
+                PrinterPath = intent.extras!!.getString("PrinterPath")!!
+                //получим незаконченные задания по отбору
+                GetDocsSet()
+                //сообразим с какими параметрами нужно вызвать ToModeSet
+                val DocSetID = intent.extras!!.getString("DocSetID")!!
+                val AddressID = intent.extras!!.getString("AddressID")!!
+                if ((DocSetID != "") && (AddressID == "")) {
+                    ToModeSet(null, DocSetID)
+                } else if ((DocSetID != "") && (AddressID != "")) {
+                    ToModeSet(AddressID, DocSetID)
+                } else ToModeSet(null, null)
             }
-            else if ((DocSetID != "") && (AddressID != "")) {
-                ToModeSet(AddressID, DocSetID)
+            catch(e: Exception) {
+                val toast = Toast.makeText(applicationContext, e.toString(), Toast.LENGTH_LONG)
+                toast.show()
             }
-            else ToModeSet(null, null)
         }
         else if (ParentForm == "SetComplete"){
-            PrinterPath = intent.extras!!.getString("PrinterPath")!!
-            GetDocsSet()
-            QuitModesSet()      //разблокируем доки
-            ToModeSetInicialization()
+            try {
+                PrinterPath = intent.extras!!.getString("PrinterPath")!!
+                GetDocsSet()
+                QuitModesSet()      //разблокируем доки
+                ToModeSetInicialization()
+            }
+            catch(e: Exception) {
+                val toast = Toast.makeText(applicationContext, e.toString(), Toast.LENGTH_LONG)
+                toast.show()
+            }
         }
     }
 
@@ -527,6 +542,10 @@ class SetInitialization : BarcodeDataReceiver() {
 
         var IsObject: Boolean = true
         var dicBarcode: MutableMap<String,String> = helper.DisassembleBarcode(Barcode)
+        if (dicBarcode["IDD"]!! == ""){
+            FExcStr.text = "Не удалось преобразовать штрихкод!"
+            return
+        }
         if (Barcode.substring(0, 2) == "25" && dicBarcode["Type"] == "113") {
 
             if (!SS.IsSC(dicBarcode["IDD"]!!, "Сотрудники")) {
