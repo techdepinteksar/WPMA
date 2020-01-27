@@ -519,10 +519,21 @@ class SetInitialization : BarcodeDataReceiver() {
     private fun reactionBarcode(Barcode: String) {
         val IDD: String = "99990" + Barcode.substring(2, 4) + "00" + Barcode.substring(4, 12)
         if (SS.IsSC(IDD, "Сотрудники")) {
-            //
             var intent = Intent(this, MainActivity::class.java)
             startActivity(intent)
             finish()
+            return
+        }
+        if (SS.IsSC(IDD, "Принтеры")) {
+            //получим путь принтера
+            val TextQuery =
+                "select descr, SP2461 " +
+                        "from SC2459 " +
+                        "where SP2465 = '$IDD'"
+            val DataTable = SS.ExecuteWithRead(TextQuery) ?: return
+
+            PrinterPath = DataTable!![1][1]
+            FExcStr.text = "Отсканирован принтер " + PrinterPath.trim() + "\n" + WhatUNeed()
             return
         }
         //переписать по аналоги со старым тсд
@@ -542,15 +553,17 @@ class SetInitialization : BarcodeDataReceiver() {
 
         var IsObject: Boolean = true
         var dicBarcode: MutableMap<String,String> = helper.DisassembleBarcode(Barcode)
-        if (dicBarcode["IDD"]!! == ""){
-            FExcStr.text = "Не удалось преобразовать штрихкод!"
-            return
-        }
+
         if (Barcode.substring(0, 2) == "25" && dicBarcode["Type"] == "113") {
+            if (dicBarcode["IDD"]!! == ""){
+                FExcStr.text = "Не удалось преобразовать штрихкод!"
+                return
+            }
 
             if (!SS.IsSC(dicBarcode["IDD"]!!, "Сотрудники")) {
                 if (!SS.IsSC(dicBarcode["IDD"]!!, "Секции")) {
-                    if (!SS.IsSC(dicBarcode["IDD"]!!, "Принтеры")) {
+                    // вместо !SS.IsSC(dicBarcode["IDD"]!!, "Принтеры")
+                    if (SS.IsSC(dicBarcode["IDD"]!!, "Принтеры")) {
                         IsObject = false
                     }
                 }

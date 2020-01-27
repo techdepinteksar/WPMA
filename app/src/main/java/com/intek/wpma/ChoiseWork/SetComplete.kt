@@ -27,7 +27,7 @@ import kotlinx.android.synthetic.main.activity_set_complete.FExcStr
 class SetComplete : BarcodeDataReceiver() {
 
     val SetInit: SetInitialization = SetInitialization()
-    var DocSet: String= ""
+    var DocSet: String = ""
     var Employer: String = ""
     var EmployerFlags: String = ""
     var EmployerIDD: String = ""
@@ -60,17 +60,17 @@ class SetComplete : BarcodeDataReceiver() {
                     "Sector.descr as Sector, " +
                     "DocCCHead.SP3595 as Number, " +
                     "DocCCHead.SP2841 as SelfRemovel " +
-            "FROM " +
+                    "FROM " +
                     "DH2776 as DocCCHead (nolock) " +
                     "LEFT JOIN SC1141 as Sector (nolock) " +
-                            "ON Sector.id = DocCCHead.SP2764 " +
+                    "ON Sector.id = DocCCHead.SP2764 " +
                     "LEFT JOIN DH2763 as DocCB (nolock) " +
-                            "ON DocCB.iddoc = DocCCHead.SP2771 " +
+                    "ON DocCB.iddoc = DocCCHead.SP2771 " +
                     "LEFT JOIN DH196 as Bill (nolock) " +
-                            "ON Bill.iddoc = DocCB.SP2759 " +
+                    "ON Bill.iddoc = DocCB.SP2759 " +
                     "LEFT JOIN _1sjourn as journForBill (nolock) " +
-                            "ON journForBill.iddoc = Bill.iddoc " +
-            "WHERE DocCCHead.iddoc = '$DocSet'"
+                    "ON journForBill.iddoc = Bill.iddoc " +
+                    "WHERE DocCCHead.iddoc = '$DocSet'"
         val DataTable = SS.ExecuteWithRead(TextQuery)
         previousAction.text = if (DataTable!![1][5].toInt() == 1) "(C) " else {
             ""
@@ -79,18 +79,17 @@ class SetComplete : BarcodeDataReceiver() {
 
         if (DataTable[1][5].toInt() == 1) DocView.text = "САМОВЫВОЗ" else DocView.text = "ДОСТАВКА"
         //тут этот код дублирую, чтобы поймать нажатие на enter после ввода колва с уже установленным принтером
-        enterCountPlace.setOnKeyListener { v: View, keyCode: Int, event->
+        enterCountPlace.setOnKeyListener { v: View, keyCode: Int, event ->
             if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_ENTER) {
                 // сохраняем текст, введенный до нажатия Enter в переменную
-                try{
+                try {
                     val count = enterCountPlace.text.toString().toInt()
                     Places = count
                     enterCountPlace.visibility = View.INVISIBLE
                     countPlace.text = "Колво мест: $Places"
                     countPlace.visibility = View.VISIBLE
                     FExcStr.text = "Ожидание команды"
-                }
-                catch (e: Exception){
+                } catch (e: Exception) {
 
                 }
             }
@@ -106,9 +105,14 @@ class SetComplete : BarcodeDataReceiver() {
                 val version = intent.getIntExtra("version", 0)
                 if (version >= 1) {
                     // ту прописываем что делать при событии сканирования
-
-                    Barcode = intent.getStringExtra("data")
-                    reactionBarcode(Barcode)
+                    try {
+                        Barcode = intent.getStringExtra("data")
+                        reactionBarcode(Barcode)
+                    }
+                    catch(e: Exception) {
+                        val toast = Toast.makeText(applicationContext, "Не удалось отсканировать штрихкод!", Toast.LENGTH_LONG)
+                        toast.show()
+                    }
 
                 }
             }
@@ -120,11 +124,11 @@ class SetComplete : BarcodeDataReceiver() {
 
 
         if (SS.IsSC(IDD, "Принтеры")) {
-            //олучим путь принтера
+            //получим путь принтера
             val TextQuery =
-                    "select descr, SP2461 " +
-                    "from SC2459 " +
-                    "where SP2465 = '$IDD'"
+                "select descr, SP2461 " +
+                        "from SC2459 " +
+                        "where SP2465 = '$IDD'"
             val DataTable = SS.ExecuteWithRead(TextQuery) ?: return false
 
             PrinterPath = DataTable!![1][1]
@@ -139,6 +143,10 @@ class SetComplete : BarcodeDataReceiver() {
         }
         if (PrinterPath.isEmpty()) {
             FExcStr.text = "Не выбран принтер!"
+            return false
+        }
+        if (Places == 0){
+            FExcStr.text = "Колво мест не указано!"
             return false
         }
         //подтянем адрес комплектации
@@ -162,7 +170,8 @@ class SetComplete : BarcodeDataReceiver() {
         var FieldList: MutableList<String> = mutableListOf("Спр.СинхронизацияДанных.ДатаРез1")
 
         //!!! при рефаторинге убрать этот костыль и сделать функцию ExecCommand доступной для всех нужных классов!!!
-        DataMapRead = SetInit.ExecCommand("PicingComplete", DataMapWrite, FieldList, DataMapRead, "")
+        DataMapRead =
+            SetInit.ExecCommand("PicingComplete", DataMapWrite, FieldList, DataMapRead, "")
 
         if ((DataMapRead["Спр.СинхронизацияДанных.ФлагРезультата"] as String).toInt() == -3) {
             FExcStr.text = DataMapRead["Спр.СинхронизацияДанных.ДатаРез1"].toString()
@@ -175,21 +184,16 @@ class SetComplete : BarcodeDataReceiver() {
         FExcStr.text = DataMapRead["Спр.СинхронизацияДанных.ДатаРез1"].toString()
 
         //вернемся обратно в SetInitialization
-        try {
-            val SetInitialization = Intent(this, SetInitialization::class.java)
-            SetInitialization.putExtra("Employer", Employer)
-            SetInitialization.putExtra("EmployerIDD", EmployerIDD)
-            SetInitialization.putExtra("EmployerFlags", EmployerFlags)
-            SetInitialization.putExtra("EmployerID", EmployerID)
-            SetInitialization.putExtra("PrinterPath", PrinterPath)
-            SetInitialization.putExtra("ParentForm", "SetComplete")
-            startActivity(SetInitialization)
-            finish()
-        }
-        catch(e: Exception) {
-            val toast = Toast.makeText(applicationContext, e.toString(), Toast.LENGTH_SHORT)
-            toast.show()
-        }
+        val SetInitialization = Intent(this, SetInitialization::class.java)
+        SetInitialization.putExtra("Employer", Employer)
+        SetInitialization.putExtra("EmployerIDD", EmployerIDD)
+        SetInitialization.putExtra("EmployerFlags", EmployerFlags)
+        SetInitialization.putExtra("EmployerID", EmployerID)
+        SetInitialization.putExtra("PrinterPath", PrinterPath)
+        SetInitialization.putExtra("ParentForm", "SetComplete")
+        startActivity(SetInitialization)
+        finish()
+
 
         return true
     }
@@ -201,18 +205,17 @@ class SetComplete : BarcodeDataReceiver() {
 
     fun ReactionKey(keyCode: Int, event: KeyEvent?) {
 
-        enterCountPlace.setOnKeyListener { v: View, keyCode: Int, event->
+        enterCountPlace.setOnKeyListener { v: View, keyCode: Int, event ->
             if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_ENTER) {
                 // сохраняем текст, введенный до нажатия Enter в переменную
-                try{
+                try {
                     val count = enterCountPlace.text.toString().toInt()
                     Places = count
                     enterCountPlace.visibility = View.INVISIBLE
                     countPlace.text = "Колво мест: $Places"
                     countPlace.visibility = View.VISIBLE
                     FExcStr.text = "Ожидание команды"
-                }
-                catch (e: Exception){
+                } catch (e: Exception) {
 
                 }
             }
@@ -220,6 +223,7 @@ class SetComplete : BarcodeDataReceiver() {
         }
 
     }
+
     override fun onResume() {
         super.onResume()
         registerReceiver(barcodeDataReceiver, IntentFilter(ACTION_BARCODE_DATA))

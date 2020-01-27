@@ -86,8 +86,8 @@
 
     <TextView
         android:id="@+id/countPlace"
-        android:layout_width="119dp"
-        android:layout_height="35dp"
+        android:layout_width="178dp"
+        android:layout_height="39dp"
         android:layout_marginTop="304dp"
         android:gravity="center"
         android:textColor="#000000"
