@@ -1,5 +1,6 @@
 package com.intek.wpma
 
+import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -17,7 +18,10 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.Toast
 import com.intek.wpma.ChoiseWork.Set.SetInitialization
+import kotlinx.android.synthetic.main.activity_menu.*
 import kotlinx.android.synthetic.main.activity_watch_table_part.PreviousAction
+import kotlinx.android.synthetic.main.activity_watch_table_part.terminalView
+import java.math.BigDecimal
 
 
 class WatchTablePart : BarcodeDataReceiver() {
@@ -30,7 +34,10 @@ class WatchTablePart : BarcodeDataReceiver() {
     var EmployerIDD: String = ""
     var EmployerID: String = ""
     var Barcode: String = ""
+    //при принятии маркировок, чтобы не сбились уже отсканированные QR-коды
+    var CountFact: Int = 0
     var PrinterPath = ""
+    var codeId:String = ""  //показатель по которому можно различать типы штрих-кодов
 
     val barcodeDataReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -41,6 +48,7 @@ class WatchTablePart : BarcodeDataReceiver() {
                     // ту прописываем что делать при событии сканирования
 
                     Barcode = intent.getStringExtra("data")
+                    codeId = intent.getStringExtra("codeId")
                     reactionBarcode(Barcode)
 
                 }
@@ -65,7 +73,10 @@ class WatchTablePart : BarcodeDataReceiver() {
         addressID = intent.extras!!.getString("addressID")!!
         InvCode = intent.extras!!.getString("ItemCode")!!
         PreviousAction.text = intent.extras!!.getString("DocView")!!
+        terminalView.text = intent.extras!!.getString("terminalView")!!
+        CountFact = intent.extras!!.getString("CountFact")!!.toInt()
         PrinterPath = intent.extras!!.getString("PrinterPath")!!
+        title = Employer
 
         //строка с шапкой
         val rowTitle = TableRow(this)
@@ -130,6 +141,8 @@ class WatchTablePart : BarcodeDataReceiver() {
             SetInitialization.putExtra("AddressID",addressID)
             SetInitialization.putExtra("PreviousAction",PreviousAction.text.toString())
             SetInitialization.putExtra("PrinterPath",PrinterPath)
+            SetInitialization.putExtra("terminalView",terminalView.text)
+            SetInitialization.putExtra("CountFact",CountFact.toString())
             SetInitialization.putExtra("ParentForm","WatchTablePart")
             startActivity(SetInitialization)
             finish()
@@ -140,6 +153,7 @@ class WatchTablePart : BarcodeDataReceiver() {
         return super.onKeyDown(keyCode, event)
     }
 
+    @SuppressLint("SetTextI18n")
     fun getTablePart(iddoc: String): Boolean{
         var TextQuery =
             "select " +
@@ -147,7 +161,8 @@ class WatchTablePart : BarcodeDataReceiver() {
                     "Sections.descr as Adress, " +
                     "Goods.SP1036 as InvCode, " +
                     "DocCC.SP3110 as Count, " +
-                    "DocCC.SP3114 as Sum " +
+                    "DocCC.SP3114 as Sum, " +
+                    "DocCCHead.SP3114 as totalSum " +
             "from " +
                     "DT2776 as DocCC (nolock) " +
                     "LEFT JOIN DH2776 as DocCCHead (nolock) ON DocCCHead.iddoc = DocCC.iddoc " +
@@ -199,6 +214,7 @@ class WatchTablePart : BarcodeDataReceiver() {
                 sum.textSize = 16F
                 sum.setTextColor(-0x1000000)
 
+
                 linearLayout.addView(number)
                 linearLayout.addView(address)
                 linearLayout.addView(code)
@@ -211,6 +227,7 @@ class WatchTablePart : BarcodeDataReceiver() {
                 }
                 table.addView(row)
             }
+            sum.text = DataTable[1][5]
         }
         return true
     }

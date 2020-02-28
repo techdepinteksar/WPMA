@@ -7,12 +7,38 @@
     tools:context=".WatchTablePart">
 
 
+    <TextView
+        android:id="@+id/terminalView"
+        android:layout_width="84dp"
+        android:layout_height="30dp"
+        android:layout_marginTop="32dp"
+        android:textColor="#000000"
+        android:textSize="16sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/sum"
+        android:layout_width="85dp"
+        android:layout_height="31dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginLeft="16dp"
+        android:layout_marginTop="32dp"
+        android:textColor="#D12114"
+        android:textSize="18sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <ScrollView
         android:id="@+id/scroll"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        tools:layout_editor_absoluteX="81dp"
-        tools:layout_editor_absoluteY="120dp">
+        android:layout_width="361dp"
+        android:layout_height="638dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.0">
 
 
         <TableLayout
@@ -47,4 +73,5 @@
 
         </TableLayout>
     </ScrollView>
+
 </androidx.constraintlayout.widget.ConstraintLayout>

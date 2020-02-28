@@ -3,13 +3,30 @@ package com.intek.wpma
 import android.content.*
 import android.content.Context
 import android.content.Intent
+import android.media.SoundPool
 import android.os.Bundle
+import android.os.Message
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import com.intek.wpma.SQL.SQL1S
+import android.media.RingtoneManager
+import android.media.Ringtone
+import androidx.core.content.ContextCompat.getSystemService
+import android.icu.lang.UCharacter.GraphemeClusterBreak.T
+import androidx.core.content.ContextCompat.getSystemService
+import android.icu.lang.UCharacter.GraphemeClusterBreak.T
+import android.media.ToneGenerator
+import android.media.AudioManager
+import androidx.core.app.ComponentActivity.ExtraData
+import androidx.core.content.ContextCompat.getSystemService
+import android.icu.lang.UCharacter.GraphemeClusterBreak.T
+import android.provider.Settings
+import kotlinx.android.synthetic.main.activity_set.*
+import java.text.SimpleDateFormat
+import java.util.*
 
 
-abstract class BarcodeDataReceiver: AppCompatActivity() {
+open abstract class BarcodeDataReceiver: AppCompatActivity() {
 
     val TAG = "IntentApiSample"
     val ACTION_BARCODE_DATA = "com.honeywell.sample.action.BARCODE_DATA"
@@ -24,6 +41,14 @@ abstract class BarcodeDataReceiver: AppCompatActivity() {
     var sdkVersion = 0
 
     val SS: SQL1S = SQL1S()
+    var terminal:String = ""
+    var tsdVers: String = "5.02"
+    //для штрих-кода типа data matrix
+    val BarcodeId = "w"
+    var ANDROID_ID: String = "androidID"
+    val ResponceTime: Int = 60 //время ожидания отклика от 1С
+
+
 
     fun sendImplicitBroadcast(ctxt: Context, i: Intent) {
         val pm = ctxt.packageManager
@@ -77,6 +102,185 @@ abstract class BarcodeDataReceiver: AppCompatActivity() {
         )
     }
 
+    fun GoodDone(){
+
+//        val toneG = ToneGenerator(AudioManager.STREAM_ALARM, 1000)
+//        repeat(400) {
+//            toneG.startTone(ToneGenerator.TONE_CDMA_NETWORK_BUSY_ONE_SHOT)
+//            toneG.stopTone()
+//        }
+    }
+
+    /// <summary>
+    /// формирует строку присвоений для инструкции SET в UPDATE из переданной таблицы
+    /// Поддерживает типы - int, DateTime, string
+    /// </summary>
+    /// <param name="DataMap"></param>
+    /// <returns></returns>
+    fun ToSetString(DataMap: MutableMap<String, Any>): String {
+        var result: String = ""
+        for (pair in DataMap) {
+            result += SS.GetSynh(pair.key) + "=" + SS.ValueToQuery(pair.value) + ","
+        }
+        //удаляем последнюю запятую
+        if (result.isNotEmpty()) {
+            result = result.substring(0, result.length - 1)
+        }
+        return result
+    }
+
+    fun timeStrToSeconds(str: String): Int {
+        val parts = str.split(":")
+        var result = 0
+        for (part in parts) {
+            val number = part.toInt()
+            result = result * 60 + number
+        }
+        return result
+    }
+
+    /// <summary>
+    ///  отсылает команду в 1С и не ждет ответа
+    /// </summary>
+    /// <param name="Command"></param>
+    /// <param name="DataMapWrite"></param>
+    /// <returns></returns>
+    fun ExecCommandNoFeedback(Command: String, DataMapWrite: MutableMap<String, Any>): Boolean
+    {
+        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+        val currentDate = sdf.format(Date()).substring(0, 10) + " 00:00:00.000"
+        val currentTime = timeStrToSeconds(sdf.format(Date()).substring(11, 19))
+        val Query =
+            "UPDATE " + SS.GetSynh("Спр.СинхронизацияДанных") +
+                    " SET DESCR='" + Command + "'," + ToSetString(DataMapWrite) + (if(DataMapWrite.isEmpty())  "" else ",") +
+                    SS.GetSynh("Спр.СинхронизацияДанных.Дата") + " = '" + currentDate + "', " +
+                    SS.GetSynh("Спр.СинхронизацияДанных.Время") + " = " + currentTime + ", " +
+                    SS.GetSynh("Спр.СинхронизацияДанных.ФлагРезультата") + " = 1," +
+                    SS.GetSynh("Спр.СинхронизацияДанных.ИДТерминала") + " = '" + ANDROID_ID + "'" +
+                    " WHERE ID = (SELECT TOP 1 ID FROM " + SS.GetSynh("Спр.СинхронизацияДанных") +
+                    " WHERE " + SS.GetSynh("Спр.СинхронизацияДанных.ФлагРезультата") + "=0)"
+        if (!SS.ExecuteWithoutRead(Query))
+        {
+            return false
+        }
+        return true
+    }
+
+    fun ExecCommand(
+        Command: String,
+        DataMapWrite: MutableMap<String, Any>,
+        FieldList: MutableList<String>,
+        DataMapRead: MutableMap<String, Any>,
+        commandID: String
+    ): MutableMap<String, Any> {
+        //тк в котлине нельзя переприсвоить значение переданному в фун параметру, создаю еще 1 перем
+        var CommandID: String = ""
+        var beda: Int = 0
+
+        if (commandID == "") {
+            CommandID = SendCommand(Command, DataMapWrite, FieldList)
+        }
+        //Ждем выполнения или отказа
+        val query =
+            "SELECT " + SS.GetSynh("Спр.СинхронизацияДанных.ФлагРезультата") + " as Flag" + (if (FieldList.size == 0) "" else "," + SS.ToFieldString(
+                FieldList
+            )) +
+                    " FROM " + SS.GetSynh("Спр.СинхронизацияДанных") + " (nolock)" +
+                    " WHERE ID='" + CommandID + "'"
+
+        var WaitRobotWork: Boolean = false
+        val sdf = SimpleDateFormat("HH:mm:ss")
+        var TimeBegin: Int = timeStrToSeconds(sdf.format(Date()))
+        while (kotlin.math.abs(TimeBegin - timeStrToSeconds(sdf.format(Date()))) < ResponceTime) {
+
+            val DataTable = SS.ExecuteWithRead(query)
+            //Ждем выполнения или отказа
+            if (DataTable == null) {
+                FExcStr.text = "Нет доступных команд! Ошибка робота!"
+            }
+            DataMapRead["Спр.СинхронизацияДанных.ФлагРезультата"] = DataTable!![1][0]
+            if ((DataMapRead["Спр.СинхронизацияДанных.ФлагРезультата"] as String).toInt() != 1) {
+                if ((DataMapRead["Спр.СинхронизацияДанных.ФлагРезультата"] as String).toInt() == 2) {
+                    if (!WaitRobotWork) {
+                        //1C получила команду, сбросим время ожидания
+                        TimeBegin = timeStrToSeconds(sdf.format(Date()))
+                        WaitRobotWork = true
+                    }
+                    continue
+                }
+                var i = 1
+                while (i < DataTable!!.size) {
+                    DataMapRead[FieldList[i - 1]] = DataTable!![1][i]
+                    i++
+                }
+                return DataMapRead
+            } else {
+                beda++
+                continue   //Бред какой-то, попробуем еще раз
+            }
+            if (TimeBegin + 1 < timeStrToSeconds(sdf.format(Date()))) {
+                //Пауза в 1, после первой секунды беспрерывной долбежки!
+                val tb: Int = timeStrToSeconds(sdf.format(Date()))
+                while (kotlin.math.abs(tb - timeStrToSeconds(sdf.format(Date()))) < 1) {
+
+                }
+            }
+        }
+        FExcStr.text = "1C не ответила! " + (if (beda == 0) "" else " Испарений: $beda")
+        return DataMapRead
+
+    }
+
+    fun SendCommand(
+        Command: String,
+        DataMapWrite: MutableMap<String, Any>,
+        FieldList: MutableList<String>
+    ): String {
+        var CommandID: String
+        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+        val currentDate = sdf.format(Date()).substring(0, 10) + " 00:00:00.000"
+        val currentTime = timeStrToSeconds(sdf.format(Date()).substring(11, 19))
+
+        val TextQuery: String =
+            "BEGIN TRAN; " +
+                    "DECLARE @CommandID as varchar(9); " +
+                    "SELECT TOP 1 @CommandID = ID FROM " + SS.GetSynh("Спр.СинхронизацияДанных") + " (tablockx) " +
+                    "WHERE " + SS.GetSynh("Спр.СинхронизацияДанных.ФлагРезультата") + "=0; " +
+                    "UPDATE " + SS.GetSynh("Спр.СинхронизацияДанных") +
+                    " SET DESCR='" + Command + "'," + ToSetString(DataMapWrite) + (if (DataMapWrite.isEmpty()) "" else ",") +
+                    SS.GetSynh("Спр.СинхронизацияДанных.Дата") + " = '" + currentDate + "', " +
+                    SS.GetSynh("Спр.СинхронизацияДанных.Время") + " = " + currentTime + ", " +
+                    SS.GetSynh("Спр.СинхронизацияДанных.ФлагРезультата") + " = 1," +
+                    SS.GetSynh("Спр.СинхронизацияДанных.ИДТерминала") + " = '${ANDROID_ID}'" +
+                    " WHERE ID=@CommandID; " +
+                    " SELECT @@rowcount as Rows, @CommandID as CommandID; " +
+                    "COMMIT TRAN;"
+        val DataTable = SS.ExecuteWithRead(TextQuery)
+        if (DataTable == null) {
+            FExcStr.text = "Нет доступных команд! Ошибка робота!"
+        }
+        CommandID = DataTable!![1][1]
+        return CommandID
+    }
+
+    fun IBS_Inicialization(EmployerID: String): Boolean
+    {
+        var TextQuery =
+            "set nocount on; " +
+                    "declare @id bigint; " +
+                    "exec IBS_Inicialize_with_DeviceID_new :Employer, :HostName, :DeviceID, @id output; " +
+                    "select @id as ID;"
+        TextQuery = SS.QuerySetParam(TextQuery, "Employer", EmployerID)
+        TextQuery = SS.QuerySetParam(TextQuery, "HostName", "Android")
+        TextQuery = SS.QuerySetParam(TextQuery, "DeviceID", ANDROID_ID)
+        val DT = SS.ExecuteWithRead(TextQuery) ?: return false
+        if (DT.isEmpty())
+        {
+            return false
+        }
+        return DT!![1][0].toInt() > 0
+
+    }
 
 
 

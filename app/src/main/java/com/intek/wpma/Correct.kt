@@ -1,17 +1,27 @@
 package com.intek.wpma
 
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
 import android.view.KeyEvent
 import android.view.View
 import android.widget.EditText
 import android.widget.TextView
+import android.widget.Toast
+import androidx.core.content.ContextCompat.startActivity
+import androidx.core.view.isVisible
 import com.intek.wpma.ChoiseWork.Set.SetInitialization
 import com.intek.wpma.Model.Model
 import com.intek.wpma.SQL.SQL1S
 import kotlinx.android.synthetic.main.activity_correct.*
 import kotlinx.android.synthetic.main.activity_correct.PreviousAction
+import kotlinx.android.synthetic.main.activity_correct.terminalView
+import kotlinx.android.synthetic.main.activity_menu.*
+import kotlinx.android.synthetic.main.activity_set.*
 
 class Correct : BarcodeDataReceiver() {
 
@@ -25,8 +35,41 @@ class Correct : BarcodeDataReceiver() {
     var CCItem: Model.StructItemSet? = null
     var DocSet: Model.StrictDoc? = null
     var PrinterPath = ""
+    var Barcode: String = ""
+    var ChoiseCorrect: Int = 0          //тип корректировки
+    var CountFact: Int = 0              //при наборе маркировок, чтобы не сбились уже отсканированные QR-коды
+    var EnterCount: Int = 0             //колво позиций для корректировки (вводится вручную)
+    var EnterCountWithoutQRCode = 0     //колво позиций без QR - кода (вводится вручную)
+    var countWithoutQRCode: Int = 0     //колво уже скорректированных позиций без QR - кода
+    var countCorrect: Int = 0           //общее колво уже скорректированных позиций (с QR - кодом и без)
+    var codeId: String = ""             //показатель по которому можно различать типы штрих-кодов
+    var flagBtn = 0
+    var flagMark = 0                    //флаг маркировки
 
 
+    val barcodeDataReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            Log.d("IntentApiSample: ", "onReceive")
+            if (ACTION_BARCODE_DATA == intent.action) {
+                val version = intent.getIntExtra("version", 0)
+                if (version >= 1) {
+                    // ту прописываем что делать при событии сканирования
+                    try {
+                        Barcode = intent.getStringExtra("data")
+                        codeId = intent.getStringExtra("codeId")
+                        reactionBarcode(Barcode)
+                    } catch (e: Exception) {
+                        val toast = Toast.makeText(
+                            applicationContext,
+                            "Не удалось отсканировать штрихкод!",
+                            Toast.LENGTH_LONG
+                        )
+                        toast.show()
+                    }
+                }
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,11 +81,63 @@ class Correct : BarcodeDataReceiver() {
         EmployerID = intent.extras!!.getString("EmployerID")!!
         iddoc = intent.extras!!.getString("iddoc")!!
         AddressID = intent.extras!!.getString("AddressID")!!
+        title = Employer
+        terminalView.text = intent.extras!!.getString("terminalView")!!
+        CountFact = intent.extras!!.getString("CountFact")!!.toInt()
         PrinterPath = intent.extras!!.getString("PrinterPath")!!
         //заполним заново товар и док
         GetItemAndDocSet()
         val label: TextView = findViewById(R.id.label)
+
         label.text = "Корректировка позиции ${CCItem!!.InvCode}"
+        val enterCountCorrect: EditText = findViewById(R.id.enterCountCorrect)
+        NoQRCode.setOnClickListener {
+            PreviousAction.text = "Введите колво товара без QR-кода"
+            enterCountCorrect?.setText("")
+            enterCountCorrect.visibility = View.VISIBLE
+            NoQRCode.isFocusable = false
+            flagBtn = 1
+        }
+
+    }
+
+    private fun reactionBarcode(Barcode: String) {
+        if (countCorrect < EnterCount) {
+            if (codeId == BarcodeId) {//проверим DataMatrix ли пришедший код
+                //проверим, был ли уже принят этот товар с маркировкой
+                var TextQuery =
+                    "SELECT SP7271, SP7274, SP7275 " +
+                            "FROM SC7277 " +
+                            "WHERE SC7277.SP7270 = '${Barcode.trim()}' " +
+                            "and SC7277.SP7271 = '${CCItem!!.ID}' "
+                val DT = SS.ExecuteWithRead(TextQuery) ?: return
+                if (DT.isEmpty()){
+                    PreviousAction.text = "Маркировка не найдена, либо товар уже набран/скорректирован! Отсканируйте QR - код"
+                    return
+                }
+                if (DT[1][2].toInt() == 1 && DT[1][1] == SS.ExtendID(iddoc,"КонтрольНабора")) {
+                    //корректируют позицию, которую только что набрали
+                    CountFact -= 1
+                }
+                //найдем маркировку в справочнике МаркировкаТовара, занулим флаг
+                TextQuery =
+                    "UPDATE SC7277 " +
+                            "SET SP7274 = '${SS.ExtendID(iddoc,"КонтрольНабора")}', SP7275 = 0 " +
+                            "where SC7277.SP7270 = '${Barcode.trim()}' " +
+                            "and SC7277.SP7271 = '${CCItem!!.ID}' "
+                if (!SS.ExecuteWithoutRead(TextQuery)) {
+                    FExcStr.text = "Не удалось освободить маркировку!"
+                    return
+                }
+                countCorrect += 1
+                PreviousAction.text = "Корректировка принята " + CCItem!!.InvCode.trim() + " - " + countCorrect.toString() + " шт. ( Осталось: " + (EnterCount - countCorrect).toString() + ") Отсканируйте QR - код!"
+                if (countCorrect == EnterCount) { // скорректировали задданное колво позиций
+                    CompleteCorrect(ChoiseCorrect, countCorrect)
+                }
+            } else {
+                PreviousAction.text = "Неправильный тип QR - кода"
+            }
+        }
     }
 
     fun GetItemAndDocSet(): Boolean {
@@ -158,29 +253,54 @@ class Correct : BarcodeDataReceiver() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-
-        ReactionKey(keyCode, event)
-        return super.onKeyDown(keyCode, event)
+        // нажали назад, вернемся на форму набора
+        if (keyCode == 4) {
+           if (ChoiseCorrect == 0) {
+               val SetInitialization = Intent(this, SetInitialization::class.java)
+               SetInitialization.putExtra("Employer", Employer)
+               SetInitialization.putExtra("EmployerIDD", EmployerIDD)
+               SetInitialization.putExtra("EmployerFlags", EmployerFlags)
+               SetInitialization.putExtra("EmployerID", EmployerID)
+               SetInitialization.putExtra("ParentForm", "Correct")
+               SetInitialization.putExtra("DocSetID", DocSet!!.ID)  //вернемся на определенную, так как что-то еще осталось
+               SetInitialization.putExtra("AddressID", CCItem!!.AdressID)
+               SetInitialization.putExtra("PrinterPath", PrinterPath)
+               SetInitialization.putExtra("PreviousAction", PreviousAction.text.toString())
+               SetInitialization.putExtra("terminalView", terminalView.text)
+               SetInitialization.putExtra("CountFact", CountFact.toString())
+               startActivity(SetInitialization)
+               finish()
+           }
+        }
+        if (ChoiseCorrect != 0 && flagMark == 1){   //корректируют позицию с маркировкой
+            //запретим кн назад,пока не все маркировки пробиты, дабы избежать путаницы
+            return false
+        }
+        else {
+            ReactionKey(keyCode, event)
+            return super.onKeyDown(keyCode, event)
+        }
     }
 
     fun ReactionKey(keyCode: Int, event: KeyEvent?) {
+
         if (keyCode in 8..10) {
-            var ChoiseCorrect: Int = 0
-            val enterCountCorrect: EditText = findViewById(R.id.enterCountCorrect)
+
+            ChoiseCorrect = 0
             enterCountCorrect.visibility = View.VISIBLE
-            // нажали 1
+            // нажали 1 - брак
             if (keyCode.toString() == "8") {
                 choise2.visibility = View.INVISIBLE
                 choise3.visibility = View.INVISIBLE
                 ChoiseCorrect = 1
             }
-            // нажали 2
+            // нажали 2 - недостача
             if (keyCode.toString() == "9") {
                 choise.visibility = View.INVISIBLE
                 choise3.visibility = View.INVISIBLE
                 ChoiseCorrect = 2
             }
-            // нажали 3
+            // нажали 3 - отказ
             if (keyCode.toString() == "10") {
                 choise.visibility = View.INVISIBLE
                 choise2.visibility = View.INVISIBLE
@@ -189,17 +309,67 @@ class Correct : BarcodeDataReceiver() {
             PreviousAction.text = "Укажите количество в штуках"
             enterCountCorrect.setOnKeyListener { v: View, keyCode: Int, event ->
                 if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_ENTER) {
-                    // сохраняем текст, введенный до нажатия Enter в переменную
-                    try{
-                        val count = enterCountCorrect.getText().toString().toInt()
-                        if (count > CCItem!!.Count){
-                            PreviousAction.text = "Нельзя скорректировать столько!"
+                    try {
+                        if (flagBtn == 0) {
+                            EnterCount = enterCountCorrect.getText().toString().toInt()
+                            if (EnterCount > CCItem!!.Count || EnterCount > (CCItem!!.Count - CountFact)) {
+                                PreviousAction.text = "Нельзя скорректировать столько! "
+                                if (EnterCount > (CCItem!!.Count - CountFact)) {
+                                    PreviousAction.text =
+                                        "Нельзя скорректировать столько! Возможно: " + (CCItem!!.Count - CountFact).toString() + " шт"
+                                }
+                            } else {
+                                //проверим есть ли маркировка
+                                val TextQuery =
+                                    "SELECT " +
+                                            "Product.SP1036, Product.descr, Product.SP1436 " +
+                                            "FROM " +
+                                            "SC33 as Product " +
+                                            "INNER JOIN SC1434 as Categories " +
+                                            "ON Categories.id = Product.SP1436 " +
+                                            "WHERE " +
+                                            "Product.id = '${CCItem!!.ID}' and Categories.SP7268 = 1"
+
+                                val DT = SS.ExecuteWithRead(TextQuery)
+
+                                //есть маркировка, пусть сканируют QR-code
+                                if (DT!!.isNotEmpty()) {
+                                    flagMark = 1
+                                    PreviousAction.text = "Отсканируйте QR - код! (Осталось: " + (EnterCount - countCorrect).toString() + " шт)"
+                                    enterCountCorrect.visibility = View.INVISIBLE
+                                    //без QR - кода можно корректировать только при недостачи
+                                    if(choise2.isVisible) {
+                                        NoQRCode.visibility = View.VISIBLE
+                                    }
+
+                                } else {
+                                    //if (countCorrect == EnterCount) {
+                                        countCorrect = EnterCount
+                                        CompleteCorrect(ChoiseCorrect, countCorrect)
+                                   // }
+                                }
+                            }
+                        } else {
+                            //нажали кн "без QR - кода "
+                            EnterCountWithoutQRCode = enterCountCorrect.getText().toString().toInt()
+                            if (EnterCountWithoutQRCode > EnterCount - countCorrect) {
+                                PreviousAction.text =
+                                    "Нельзя скорректировать столько! Возможно: " + (EnterCount - countCorrect).toString() + " шт"
+
+                            } else {
+                                flagBtn = 0
+                                enterCountCorrect.visibility = View.INVISIBLE
+                                countWithoutQRCode += EnterCountWithoutQRCode
+                                countCorrect += EnterCountWithoutQRCode
+                                if (countCorrect == EnterCount) {
+                                    //все позиций скорректированы, завершим корректировку
+                                    CompleteCorrect(ChoiseCorrect, countCorrect)
+                                }
+                                PreviousAction.text = "Корректировка принята " + CCItem!!.InvCode.trim() + " - " + countCorrect.toString() + " шт. ( Осталось: " + (EnterCount - countCorrect).toString() + ") Отсканируйте QR - код!"
+                            }
                         }
-                        else {
-                            CompleteCorrect(ChoiseCorrect, count)
-                        }
-                    }
-                    catch (e: Exception){
+
+                    } catch (e: Exception) {
 
                     }
                 }
@@ -259,28 +429,28 @@ class Correct : BarcodeDataReceiver() {
         }
 
         var TextQuery =
-        "begin tran; " +
-                "update DT2776 " +
-                "set SP3110 = :count, " +
-                "SP3114 = SP3112 *:count " +
-                "where DT2776 .iddoc = :iddoc and DT2776 .lineno_ = :currline; " +
-                "if @@rowcount > 0 begin " +
-                "insert into DT2776 (SP3108 , SP3109 , SP3110 ," +
-                "SP3111 , SP3112 , SP3113 , SP3114 ," +
-                "SP3115 , SP3116 , SP3117 , SP4977 ," +
-                "SP5507 , SP5508 , SP5509 , SP5510 ," +
-                "SP5673 , SP5986 , SP5987 , SP5988 , " +
-                "lineno_, iddoc, SP6447 ) " +
-                "select SP3108 , SP3109 , :CountCorrect ," +
-                "SP3111 , SP3112 , SP3113 , SP3112 * :CountCorrect A," +
-                "SP3115 , :CountCorrect , :Reason, SP4977 ," +
-                "SP5507 , SP5508 , :AdressCode , SP5508 ," +
-                "SP5673 , SP5986 , SP5987 , SP5988 , " +
-                "(select max(lineno_) + 1 from DT2776 where iddoc = :iddoc), iddoc, 0 " +
-                "from DT2776 as ForInst where ForInst.iddoc = :iddoc and ForInst.lineno_ = :currline; " +
-                "if @@rowcount = 0 rollback tran else commit tran " +
-                "end " +
-                "else rollback"
+            "begin tran; " +
+                    "update DT2776 " +
+                    "set SP3110 = :count, " +
+                    "SP3114 = SP3112 *:count " +
+                    "where DT2776 .iddoc = :iddoc and DT2776 .lineno_ = :currline; " +
+                    "if @@rowcount > 0 begin " +
+                    "insert into DT2776 (SP3108 , SP3109 , SP3110 ," +
+                    "SP3111 , SP3112 , SP3113 , SP3114 ," +
+                    "SP3115 , SP3116 , SP3117 , SP4977 ," +
+                    "SP5507 , SP5508 , SP5509 , SP5510 ," +
+                    "SP5673 , SP5986 , SP5987 , SP5988 , " +
+                    "lineno_, iddoc, SP6447 ) " +
+                    "select SP3108 , SP3109 , :CountCorrect ," +
+                    "SP3111 , SP3112 , SP3113 , SP3112 * :CountCorrect A," +
+                    "SP3115 , :CountCorrect , :Reason, SP4977 ," +
+                    "SP5507 , SP5508 , :AdressCode , SP5508 ," +
+                    "SP5673 , SP5986 , SP5987 , SP5988 , " +
+                    "(select max(lineno_) + 1 from DT2776 where iddoc = :iddoc), iddoc, 0 " +
+                    "from DT2776 as ForInst where ForInst.iddoc = :iddoc and ForInst.lineno_ = :currline; " +
+                    "if @@rowcount = 0 rollback tran else commit tran " +
+                    "end " +
+                    "else rollback"
         TextQuery = SS.QuerySetParam(TextQuery, "count", CCItem!!.Count - CountCorrect)
         TextQuery = SS.QuerySetParam(TextQuery, "CountCorrect", CountCorrect)
         TextQuery = SS.QuerySetParam(TextQuery, "iddoc", DocSet!!.ID)
@@ -288,45 +458,58 @@ class Correct : BarcodeDataReceiver() {
         TextQuery = SS.QuerySetParam(TextQuery, "Reason", CorrectReason)
         TextQuery = SS.QuerySetParam(TextQuery, "AdressCode", AdressCode)
 
-        if (!SS.ExecuteWithoutRead(TextQuery))
-        {
+        if (!SS.ExecuteWithoutRead(TextQuery)) {
             return false
         }
-        PreviousAction.text = "Корректировка принята " + CCItem!!.InvCode.trim() + " - " + CountCorrect.toString() + " шт. (" + What + ")"
+        PreviousAction.text =
+            "Корректировка принята " + CCItem!!.InvCode.trim() + " - " + CountCorrect.toString() + " шт. (" + What + ")"
 
         // переходим обратно на форму отбора и завершаем корректировку
         val SetInitialization = Intent(this, SetInitialization::class.java)
-        if (CountCorrect == CCItem!!.Count)
-        {
+        if (CountCorrect == CCItem!!.Count) {
             SetInitialization.putExtra("Employer", Employer)
-            SetInitialization.putExtra("EmployerIDD",EmployerIDD)
-            SetInitialization.putExtra("EmployerFlags",EmployerFlags)
-            SetInitialization.putExtra("EmployerID",EmployerID)
-            SetInitialization.putExtra("ParentForm","Correct")
-            SetInitialization.putExtra("DocSetID","")  //скорректировали полностью
-            SetInitialization.putExtra("AddressID","")
-        }
-        else
-        {
+            SetInitialization.putExtra("EmployerIDD", EmployerIDD)
+            SetInitialization.putExtra("EmployerFlags", EmployerFlags)
+            SetInitialization.putExtra("EmployerID", EmployerID)
+            SetInitialization.putExtra("ParentForm", "Correct")
+            SetInitialization.putExtra("DocSetID", "")  //скорректировали полностью
+            SetInitialization.putExtra("AddressID", "")
+        } else {
             SetInitialization.putExtra("Employer", Employer)
-            SetInitialization.putExtra("EmployerIDD",EmployerIDD)
-            SetInitialization.putExtra("EmployerFlags",EmployerFlags)
-            SetInitialization.putExtra("EmployerID",EmployerID)
-            SetInitialization.putExtra("ParentForm","Correct")
-            SetInitialization.putExtra("DocSetID",DocSet!!.ID)  //вернемся на определенную, так как что-то еще осталось
-            if (CountCorrect == CCItem!!.Count){
-                SetInitialization.putExtra("AddressID","")
-            }
-            else SetInitialization.putExtra("AddressID",CCItem!!.AdressID)
+            SetInitialization.putExtra("EmployerIDD", EmployerIDD)
+            SetInitialization.putExtra("EmployerFlags", EmployerFlags)
+            SetInitialization.putExtra("EmployerID", EmployerID)
+            SetInitialization.putExtra("ParentForm", "Correct")
+            SetInitialization.putExtra("DocSetID", DocSet!!.ID)  //вернемся на определенную, так как что-то еще осталось
+            if (CountCorrect == CCItem!!.Count) {
+                SetInitialization.putExtra("AddressID", "")
+            } else SetInitialization.putExtra("AddressID", CCItem!!.AdressID)
         }
-        SetInitialization.putExtra("PrinterPath",PrinterPath)
-        SetInitialization.putExtra("PreviousAction",PreviousAction.text.toString())
+        SetInitialization.putExtra("PrinterPath", PrinterPath)
+        SetInitialization.putExtra("PreviousAction", PreviousAction.text.toString())
+        SetInitialization.putExtra("terminalView", terminalView.text)
+        SetInitialization.putExtra("CountFact", CountFact.toString())
         startActivity(SetInitialization)
         finish()
 
 
         return true
     } // CompleteCorrect
+
+    override fun onResume() {
+        super.onResume()
+        //        IntentFilter intentFilter = new IntentFilter("hsm.RECVRBI");
+        registerReceiver(barcodeDataReceiver, IntentFilter(ACTION_BARCODE_DATA))
+        claimScanner()
+        Log.d("IntentApiSample: ", "onResume")
+    }
+
+    override fun onPause() {
+        super.onPause()
+        unregisterReceiver(barcodeDataReceiver)
+        releaseScanner()
+        Log.d("IntentApiSample: ", "onPause")
+    }
 
 }
 

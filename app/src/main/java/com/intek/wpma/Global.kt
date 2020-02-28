@@ -7,6 +7,6 @@ class Global {
     }
 
     enum class ActionSet{
-        ScanAdress, ScanItem, EnterCount, ScanPart, ScanBox, ScanPallete, Waiting
+        ScanAdress, ScanItem, EnterCount, ScanPart, ScanBox, ScanPallete, Waiting, ScanQRCode
     }
 }

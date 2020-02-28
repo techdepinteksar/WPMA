@@ -3,11 +3,15 @@ package com.intek.wpma
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.provider.Settings
 import android.view.KeyEvent
+import android.widget.Toast
 import com.intek.wpma.ChoiseWork.Set.SetInitialization
 import kotlinx.android.synthetic.main.activity_menu.*
+import kotlinx.android.synthetic.main.activity_menu.terminalView
+import kotlinx.android.synthetic.main.activity_watch_table_part.*
 
-class Menu : AppCompatActivity() {
+class Menu : BarcodeDataReceiver() {
 
     var Employer: String = ""
     var EmployerFlags: String = ""
@@ -24,8 +28,9 @@ class Menu : AppCompatActivity() {
         EmployerIDD = intent.extras!!.getString("EmployerIDD")!!
         EmployerID = intent.extras!!.getString("EmployerID")!!
         ParentForm = intent.extras!!.getString("ParentForm")!!
+        terminalView.text = intent.extras!!.getString("terminalView")!!
 
-        employer.text = Employer
+        title = Employer
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
@@ -41,13 +46,14 @@ class Menu : AppCompatActivity() {
         var intent: Intent
 
         if (num == 7) {     // режим отбора
-            intent = Intent(this, SetInitialization::class.java)
-            intent.putExtra("Employer", Employer)
-            intent.putExtra("EmployerIDD",EmployerIDD)
-            intent.putExtra("EmployerFlags",EmployerFlags)
-            intent.putExtra("EmployerID",EmployerID)
-            intent.putExtra("ParentForm","Menu")
-            startActivity(intent)
+            val SetInit = Intent(this, SetInitialization::class.java)
+            SetInit.putExtra("Employer", Employer)
+            SetInit.putExtra("EmployerIDD",EmployerIDD)
+            SetInit.putExtra("EmployerFlags",EmployerFlags)
+            SetInit.putExtra("EmployerID",EmployerID)
+            SetInit.putExtra("terminalView",terminalView.text.trim())
+            SetInit.putExtra("ParentForm","Menu")
+            startActivity(SetInit)
         }
     }
 }

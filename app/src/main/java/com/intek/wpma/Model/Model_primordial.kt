@@ -1,12 +1,7 @@
 package com.intek.wpma.Model
 
-import android.app.DownloadManager
-import com.intek.wpma.Global
 import com.intek.wpma.SQL.SQL1S
-import net.sourceforge.jtds.jdbc.DateTime
 import java.math.BigDecimal
-import java.text.SimpleDateFormat
-import java.util.*
 
 class Model : SQL1S() {
 
@@ -22,7 +17,7 @@ class Model : SQL1S() {
     val OKEIOthers: String get() { return FOKEIOthers }
 
     data class StrictDoc(
-        // оставил только то, что используется в отборе
+        // оставил только то, что используется в отборе, тк заполнить нужно сразу все поля, иначе структура не создастся
         val ID: String,
         var SelfRemovel: Int,
         var View: String,
@@ -51,8 +46,8 @@ class Model : SQL1S() {
     )
 
     data class Section(
-        var ID: String,
-        var IDD: String,
+        val ID: String,
+        val IDD: String,
         var Type: String,
         var Descr: String
     )
@@ -75,80 +70,14 @@ class Model : SQL1S() {
         var OKEI2Coef: Int
     )
 
-    fun IBS_Inicialization(EmployerID: String): Boolean
-    {
-        var TextQuery =
-        "set nocount on; " +
-                "declare @id bigint; " +
-                "exec IBS_Inicialize_with_DeviceID_new :Employer, :HostName, :DeviceID, @id output; " +
-                "select @id as ID;"
-        TextQuery = QuerySetParam(TextQuery, "Employer", EmployerID)
-        TextQuery = QuerySetParam(TextQuery, "HostName", "Android")
-        //пока присвою жесткий id                                       DeviceID.GetDeviceID()
-        TextQuery = QuerySetParam(TextQuery, "DeviceID", "Android_ID")
-        val DT = ExecuteWithRead(TextQuery) ?: return false
-        if (DT.isEmpty())
-        {
-            return false
-        }
-        return DT!![1][0].toInt() > 0
+    data class DocCC(
+        val ID: String,
+        val Sector: String,
+        var Rows: String,
+        var TypeSetter: String, //он же наборщик
+        var FlagDelivery: Int
+    )
 
-    }
-
-    /// <summary>
-    ///  отсылает команду в 1С и не ждет ответа
-    /// </summary>
-    /// <param name="Command"></param>
-    /// <param name="DataMapWrite"></param>
-    /// <returns></returns>
-    fun ExecCommandNoFeedback(Command: String, DataMapWrite: MutableMap<String, Any>): Boolean
-    {
-        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
-        val currentDate = sdf.format(Date()).substring(0, 10) + " 00:00:00.000"
-        val currentTime = timeStrToSeconds(sdf.format(Date()).substring(11, 19))
-        val Query =
-        "UPDATE " + GetSynh("Спр.СинхронизацияДанных") +
-                " SET DESCR='" + Command + "'," + ToSetString(DataMapWrite) + (if(DataMapWrite.isEmpty())  "" else ",") +
-        GetSynh("Спр.СинхронизацияДанных.Дата") + " = '" + currentDate + "', " +
-                GetSynh("Спр.СинхронизацияДанных.Время") + " = " + currentTime + ", " +
-                GetSynh("Спр.СинхронизацияДанных.ФлагРезультата") + " = 1," +
-                GetSynh("Спр.СинхронизацияДанных.ИДТерминала") + " = '" + "Android_ID" + "'" +
-                " WHERE ID = (SELECT TOP 1 ID FROM " + GetSynh("Спр.СинхронизацияДанных") +
-                " WHERE " + GetSynh("Спр.СинхронизацияДанных.ФлагРезультата") + "=0)"
-        if (!ExecuteQuery(Query, false))
-        {
-            return false
-        }
-        return true
-    }
-
-    /// <summary>
-    /// формирует строку присвоений для инструкции SET в UPDATE из переданной таблицы
-    /// Поддерживает типы - int, DateTime, string
-    /// </summary>
-    /// <param name="DataMap"></param>
-    /// <returns></returns>
-    fun ToSetString(DataMap: MutableMap<String, Any>): String {
-        var result: String = ""
-        for (pair in DataMap) {
-            result += GetSynh(pair.key) + "=" + ValueToQuery(pair.value) + ","
-        }
-        //удаляем последнюю запятую
-        if (result.isNotEmpty()) {
-            result = result.substring(0, result.length - 1)
-        }
-        return result
-    }
-
-    fun timeStrToSeconds(str: String): Int {
-        val parts = str.split(":")
-        var result = 0
-        for (part in parts) {
-            val number = part.toInt()
-            result = result * 60 + number
-        }
-        return result
-    }
 
 
 }

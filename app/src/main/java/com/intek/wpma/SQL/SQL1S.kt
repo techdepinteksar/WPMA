@@ -19,6 +19,7 @@ open class SQL1S : SQLSynchronizer() {
     val ExclusionFields: MutableList<String> = mutableListOf()
     var helper: Helper? = null
 
+
     /*Конструктор класса
 
      */
@@ -369,7 +370,8 @@ open class SQL1S : SQLSynchronizer() {
                  /// <param name="DateTime"></param>
                  /// <returns></returns>
                  */
-    fun DateTimeToSQL(DateTime: DateTime): String { // из-за отсутствия типа DateTime в kotlin функция нуждается в отладке
+    fun DateTimeToSQL(DateTime: DateTime): String {
+        // из-за отсутствия типа DateTime в kotlin функция нуждается в отладке
         //YYYYMMDD hh:mm:ss.nnn
         //return DateTime.Year.ToString() +
         //        DateTime.Month.ToString().PadLeft(2, '0') +

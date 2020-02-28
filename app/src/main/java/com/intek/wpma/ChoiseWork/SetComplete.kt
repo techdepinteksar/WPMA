@@ -8,6 +8,7 @@ import android.content.IntentFilter
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.provider.ContactsContract
+import android.provider.Settings
 import android.util.Log
 import android.util.Printer
 import android.view.KeyEvent
@@ -23,6 +24,7 @@ import kotlinx.android.synthetic.main.activity_set.*
 import kotlinx.android.synthetic.main.activity_set.PreviousAction
 import kotlinx.android.synthetic.main.activity_set_complete.*
 import kotlinx.android.synthetic.main.activity_set_complete.FExcStr
+import kotlinx.android.synthetic.main.activity_set_complete.terminalView
 
 class SetComplete : BarcodeDataReceiver() {
 
@@ -46,6 +48,10 @@ class SetComplete : BarcodeDataReceiver() {
         EmployerIDD = intent.extras!!.getString("EmployerIDD")!!
         EmployerID = intent.extras!!.getString("EmployerID")!!
         PrinterPath = intent.extras!!.getString("PrinterPath")!!
+        terminalView.text = intent.extras!!.getString("terminalView")!!
+        ANDROID_ID = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+        title = Employer
+
         if (PrinterPath != "") {
             printer.text = PrinterPath
             FExcStr.text = "Введите колво мест"
@@ -145,10 +151,6 @@ class SetComplete : BarcodeDataReceiver() {
             FExcStr.text = "Не выбран принтер!"
             return false
         }
-        if (Places == 0){
-            FExcStr.text = "Колво мест не указано!"
-            return false
-        }
         //подтянем адрес комплектации
         val TextQuery =
             "SELECT ID, SP3964, descr FROM SC1141 (nolock) WHERE SP1935= '$IDD'"
@@ -169,9 +171,7 @@ class SetComplete : BarcodeDataReceiver() {
         var DataMapRead: MutableMap<String, Any> = mutableMapOf()
         var FieldList: MutableList<String> = mutableListOf("Спр.СинхронизацияДанных.ДатаРез1")
 
-        //!!! при рефаторинге убрать этот костыль и сделать функцию ExecCommand доступной для всех нужных классов!!!
-        DataMapRead =
-            SetInit.ExecCommand("PicingComplete", DataMapWrite, FieldList, DataMapRead, "")
+        DataMapRead = ExecCommand("PicingComplete", DataMapWrite, FieldList, DataMapRead, "")
 
         if ((DataMapRead["Спр.СинхронизацияДанных.ФлагРезультата"] as String).toInt() == -3) {
             FExcStr.text = DataMapRead["Спр.СинхронизацияДанных.ДатаРез1"].toString()
@@ -183,6 +183,8 @@ class SetComplete : BarcodeDataReceiver() {
         }
         FExcStr.text = DataMapRead["Спр.СинхронизацияДанных.ДатаРез1"].toString()
 
+        SetInit.LockoutDoc(DocSet)      //разблокируем доки
+
         //вернемся обратно в SetInitialization
         val SetInitialization = Intent(this, SetInitialization::class.java)
         SetInitialization.putExtra("Employer", Employer)
@@ -190,6 +192,7 @@ class SetComplete : BarcodeDataReceiver() {
         SetInitialization.putExtra("EmployerFlags", EmployerFlags)
         SetInitialization.putExtra("EmployerID", EmployerID)
         SetInitialization.putExtra("PrinterPath", PrinterPath)
+        SetInitialization.putExtra("terminalView",terminalView.text.trim())
         SetInitialization.putExtra("ParentForm", "SetComplete")
         startActivity(SetInitialization)
         finish()

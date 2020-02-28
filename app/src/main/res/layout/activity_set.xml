@@ -88,10 +88,10 @@
         android:textSize="18sp"
         app:layout_constraintBottom_toTopOf="@+id/FExcStr"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.466"
+        app:layout_constraintHorizontal_bias="0.215"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.0" />
+        app:layout_constraintVertical_bias="0.093" />
 
     <TextView
         android:id="@+id/PreviousAction"
@@ -109,11 +109,11 @@
 
     <TextView
         android:id="@+id/InvCode"
-        android:layout_width="96dp"
-        android:layout_height="39dp"
+        android:layout_width="120dp"
+        android:layout_height="48dp"
         android:layout_marginTop="188dp"
         android:textColorHint="#000000"
-        android:textSize="19sp"
+        android:textSize="22sp"
         android:textStyle="bold"
         android:visibility="invisible"
         app:layout_constraintStart_toStartOf="parent"
@@ -121,13 +121,14 @@
 
     <TextView
         android:id="@+id/item"
-        android:layout_width="213dp"
-        android:layout_height="78dp"
-        android:layout_marginStart="100dp"
-        android:layout_marginLeft="100dp"
+        android:layout_width="197dp"
+        android:layout_height="91dp"
+        android:layout_marginStart="120dp"
+        android:layout_marginLeft="120dp"
         android:layout_marginTop="188dp"
+        android:gravity="left"
         android:textColor="#000000"
-        android:textSize="21sp"
+        android:textSize="23sp"
         android:visibility="invisible"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -142,7 +143,7 @@
         android:gravity="center"
         android:text="9 - коррект."
         android:textColor="#000000"
-        android:textSize="18sp"
+        android:textSize="16sp"
         android:visibility="invisible"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -168,7 +169,7 @@
         android:layout_height="42dp"
         android:layout_marginStart="164dp"
         android:layout_marginLeft="164dp"
-        android:layout_marginTop="268dp"
+        android:layout_marginTop="284dp"
         android:ems="10"
         android:inputType="number"
         android:visibility="invisible"
@@ -181,10 +182,23 @@
         android:layout_height="40dp"
         android:layout_marginStart="12dp"
         android:layout_marginLeft="12dp"
-        android:layout_marginTop="268dp"
+        android:layout_marginTop="284dp"
+        android:gravity="center_horizontal"
         android:textColor="#000000"
-        android:textSize="22sp"
+        android:textSize="24sp"
         android:visibility="invisible"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/terminalView"
+        android:layout_width="84dp"
+        android:layout_height="31dp"
+        android:layout_marginStart="260dp"
+        android:layout_marginLeft="260dp"
+        android:layout_marginTop="12dp"
+        android:textColor="#000000"
+        android:textSize="16sp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
