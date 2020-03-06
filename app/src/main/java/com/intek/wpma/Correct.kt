@@ -272,14 +272,9 @@ class Correct : BarcodeDataReceiver() {
                finish()
            }
         }
-        if (ChoiseCorrect != 0 && flagMark == 1){   //корректируют позицию с маркировкой
-            //запретим кн назад,пока не все маркировки пробиты, дабы избежать путаницы
-            return false
-        }
-        else {
-            ReactionKey(keyCode, event)
-            return super.onKeyDown(keyCode, event)
-        }
+
+        ReactionKey(keyCode, event)
+        return super.onKeyDown(keyCode, event)
     }
 
     fun ReactionKey(keyCode: Int, event: KeyEvent?) {

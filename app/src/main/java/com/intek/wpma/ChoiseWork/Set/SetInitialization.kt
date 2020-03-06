@@ -326,12 +326,48 @@ class SetInitialization : BarcodeDataReceiver() {
             DataTable[1][26].toInt()                    //FlagDelivery
         )
 
+        //проверим есть ли маркировка
+        TextQuery =
+            "SELECT " +
+                    "Product.SP1036, Product.descr, Product.SP1436 " +
+                    "FROM " +
+                    "SC33 as Product " +
+                    "INNER JOIN SC1434 as Categories " +
+                    "ON Categories.id = Product.SP1436 " +
+                    "WHERE " +
+                    "Product.id = '${CCItem!!.ID}' and Categories.SP7268 = 1"
+        var DT = SS.ExecuteWithRead(TextQuery) ?: return false
+        if (DT!!.isNotEmpty()) {
+            //проверим колво занятых маркировок с набранным колвом текущей позиции
+            TextQuery =
+                "declare @count INT " +
+                "SET @count = " +
+                            "(select count(*) " +
+                            "from SC7277 " +
+                            "where SP7273 = 1 and SP7274 = '${SS.ExtendID(DocCC!!.ID, "КонтрольНабора")}' and SP7275 = 1 and SP7271 = '${CCItem!!.ID}') " +
+                "select SUM(SP3110) as CountCC, @count as CountMark " +
+                "from DT2776 " +
+                "where iddoc = '${DocCC!!.ID}' and SP3116 = 0 and SP5986 != :EmptyDate "
+            TextQuery = SS.QuerySetParam(TextQuery, "EmptyDate", SS.GetVoidDate())
+            DT = SS.ExecuteWithRead(TextQuery)?: return false
+            if (DT[1][0] == "null"){        //потерянные маркировки есть, а в доке нет ни одной принятой позиции
+                if (DT[1][1].toInt() > 0) {
+                    CountFact = DT[1][1].toInt()
+                }
+            }
+            else {  //колво набранных маркировок не соответсвтует колву принятых в доке
+                if ((DT[1][1].toInt() - DT[1][0].toInt()) > 0){
+                    CountFact = DT[1][1].toInt() - DT[1][0].toInt()
+                }
+            }
+        }
+
         if (CountFact ==0) {
             CurrentAction = Global.ActionSet.ScanAdress
             FExcStr.text = WhatUNeed()
         }
         else{
-            //вернулись из корректировки или просмотра с уже набранными маркировками
+            //вернулись из корректировки/просмотра, лиюо заново зашли в режим с уже набранными маркировками
             CurrentAction = Global.ActionSet.ScanQRCode
             PreviousAction.text = "Для завершения набора позиции с маркировкой нажмите 'ENTER'!"
             //набирали товар с маркировкой и не завершили набор
@@ -673,12 +709,13 @@ class SetInitialization : BarcodeDataReceiver() {
 
         if (CurrentAction == Global.ActionSet.ScanQRCode && codeId == BarcodeId){//заодно проверим DataMatrix ли пришедший код
             //найдем маркировку в справочнике МаркировкаТовара
+            //Barcode.replace("\u001D","")
             TextQuery =
                 "SELECT SP7271 " +
                         "FROM SC7277 " +
                         "where SC7277.SP7270 = '${Barcode.trim()}' " +
                             "and SC7277.SP7271 = '${CCItem!!.ID}' " +
-                            "and SC7277.SP7273 = 1 and SC7277.SP7275 = 0 and SC7277.SP7274 = '' "
+                            "and SC7277.SP7273 = 1 and SC7277.SP7275 = 0 and SC7277.SP7274 = '   0     0   ' "
             DT = SS.ExecuteWithRead(TextQuery) ?: return false
             if (DT.isEmpty()){
                 FExcStr.text = "Маркировка не найдена, либо товар уже набран/скорректирован!" + WhatUNeed()
@@ -711,7 +748,7 @@ class SetInitialization : BarcodeDataReceiver() {
                     CountFact = 1
                     EnterCountSet(CountFact)
                 }
-                FExcStr.text = "Отобрано " + CCItem!!.InvCode.trim() + " - " + CountFact.toString() + " шт. (строка " + CCItem!!.CurrLine + ")" + WhatUNeed()
+                FExcStr.text = "Отобрано " + CCItem!!.InvCode.trim() + " - " + CountFact.toString() + " шт. (строка " + CCItem!!.CurrLine + ") " + WhatUNeed() + " - СЛЕДУЮЩИЙ!"
                 count.text = (CCItem!!.Count - CountFact).toString() + " шт по 1"
             }
             return true
@@ -824,7 +861,18 @@ class SetInitialization : BarcodeDataReceiver() {
                     if (CCItem!!.Details > 0) {
                         CurrentAction = Global.ActionSet.ScanPart
                     } else {
-                        CurrentAction = Global.ActionSet.ScanItem
+                        //проверим есть ли маркировка
+                        val TextQuery =
+                            "SELECT SP7271 " +
+                            "FROM SC7277 " +
+                            "WHERE " +
+                                    "SC7277.SP7271 = '${CCItem!!.ID}' " +
+                                    "and SC7277.SP7273 = 1 and SC7277.SP7275 = 0 and SC7277.SP7274 = '   0     0   ' "
+                        val DT = SS.ExecuteWithRead(TextQuery) ?: return false
+                        if (DT.isEmpty()){
+                            CurrentAction = Global.ActionSet.ScanItem
+                        }
+                        else CurrentAction = Global.ActionSet.ScanQRCode
                     }
                     FExcStr.text = WhatUNeed()
                     return true
@@ -983,14 +1031,6 @@ class SetInitialization : BarcodeDataReceiver() {
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
 
-        // нажали назад, выйдем и разблокируем доки
-        if (keyCode == 4) {
-            if(CurrentAction == Global.ActionSet.ScanQRCode){   //тк возможно набрали не всю строку, а маркировки уже заняты
-                FExcStr.text = "Сначала завершите набор с маркировкой! Нажмите 'ENTER'!"
-                return false
-            }
-            QuitModesSet()
-        }
         ReactionKey(keyCode, event)
         return super.onKeyDown(keyCode, event)
     }
@@ -1008,12 +1048,13 @@ class SetInitialization : BarcodeDataReceiver() {
 
             else -> RKSetInicialization(keyCode, event)
         }
-
+        // нажали назад, выйдем и разблокируем доки
+        if (keyCode == 4){
+            QuitModesSet()
+        }
     }
 
     fun RKSet(keyCode: Int, event: KeyEvent?) {
-
-
 
         if (keyCode == 22) //нажали вправо; просмотр табл. части
         {

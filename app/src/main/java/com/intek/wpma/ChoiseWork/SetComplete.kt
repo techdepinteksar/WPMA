@@ -175,6 +175,17 @@ class SetComplete : BarcodeDataReceiver() {
 
         if ((DataMapRead["Спр.СинхронизацияДанных.ФлагРезультата"] as String).toInt() == -3) {
             FExcStr.text = DataMapRead["Спр.СинхронизацияДанных.ДатаРез1"].toString()
+            //сборочный уже закрыт, уйдем с формы завершения набора
+            val SetInitialization = Intent(this, SetInitialization::class.java)
+            SetInitialization.putExtra("Employer", Employer)
+            SetInitialization.putExtra("EmployerIDD", EmployerIDD)
+            SetInitialization.putExtra("EmployerFlags", EmployerFlags)
+            SetInitialization.putExtra("EmployerID", EmployerID)
+            SetInitialization.putExtra("PrinterPath", PrinterPath)
+            SetInitialization.putExtra("terminalView",terminalView.text.trim())
+            SetInitialization.putExtra("ParentForm", "SetComplete")
+            startActivity(SetInitialization)
+            finish()
             return false
         }
         if ((DataMapRead["Спр.СинхронизацияДанных.ФлагРезультата"] as String).toInt() != 3) {

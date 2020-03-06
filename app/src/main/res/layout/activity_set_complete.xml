@@ -50,7 +50,7 @@
         android:layout_width="275dp"
         android:layout_height="127dp"
         android:layout_marginTop="396dp"
-        android:gravity="center_horizontal|top"
+        android:gravity="top|left"
         android:text="Отсканируйте принтер"
         android:textColor="#070AA0"
         android:textSize="24sp"
