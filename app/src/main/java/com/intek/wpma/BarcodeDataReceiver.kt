@@ -1,26 +1,13 @@
 package com.intek.wpma
 
-import android.content.*
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.media.SoundPool
+import android.content.pm.PackageManager
 import android.os.Bundle
-import android.os.Message
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import com.intek.wpma.SQL.SQL1S
-import android.media.RingtoneManager
-import android.media.Ringtone
-import androidx.core.content.ContextCompat.getSystemService
-import android.icu.lang.UCharacter.GraphemeClusterBreak.T
-import androidx.core.content.ContextCompat.getSystemService
-import android.icu.lang.UCharacter.GraphemeClusterBreak.T
-import android.media.ToneGenerator
-import android.media.AudioManager
-import androidx.core.app.ComponentActivity.ExtraData
-import androidx.core.content.ContextCompat.getSystemService
-import android.icu.lang.UCharacter.GraphemeClusterBreak.T
-import android.provider.Settings
 import kotlinx.android.synthetic.main.activity_set.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -282,7 +269,42 @@ open abstract class BarcodeDataReceiver: AppCompatActivity() {
 
     }
 
+     fun checkCameraHardware(context: Context): Boolean {
+         return context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)
+    }
 
+    fun Login(EmployerID: String): Boolean {
+//        if (!SS.UpdateProgram())
+//        {
+//            return false
+//        }
+//        if (!SS.SynhDateTime())
+//        {
+//            return false
+//        }
+        if (!IBS_Inicialization(EmployerID)) {
+            return false
+        }
+
+        var DataMapWrite: MutableMap<String, Any> = mutableMapOf()
+        DataMapWrite["Спр.СинхронизацияДанных.ДатаСпрВход1"] = SS.ExtendID(EmployerID, "Спр.Сотрудники")
+        DataMapWrite["Спр.СинхронизацияДанных.ДатаВход1"] = ANDROID_ID
+        if (!ExecCommandNoFeedback("Login", DataMapWrite)) {
+            return false
+        }
+        return true
+    }
+
+    fun Logout(EmployerID: String): Boolean{
+        var DataMapWrite: MutableMap<String, Any> = mutableMapOf()
+        DataMapWrite["Спр.СинхронизацияДанных.ДатаСпрВход1"] = SS.ExtendID(EmployerID, "Спр.Сотрудники")
+        DataMapWrite["Спр.СинхронизацияДанных.ДатаВход1"] = ANDROID_ID
+        if (!ExecCommandNoFeedback("Logout", DataMapWrite)) {
+            return false
+        }
+        SS.ExecuteWithoutRead("exec IBS_Finalize")
+        return true
+    }
 
 
 }

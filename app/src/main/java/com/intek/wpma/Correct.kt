@@ -45,6 +45,7 @@ class Correct : BarcodeDataReceiver() {
     var codeId: String = ""             //показатель по которому можно различать типы штрих-кодов
     var flagBtn = 0
     var flagMark = 0                    //флаг маркировки
+    var isMobile = false    //флаг мобильного устройства
 
 
     val barcodeDataReceiver = object : BroadcastReceiver() {
@@ -85,6 +86,7 @@ class Correct : BarcodeDataReceiver() {
         terminalView.text = intent.extras!!.getString("terminalView")!!
         CountFact = intent.extras!!.getString("CountFact")!!.toInt()
         PrinterPath = intent.extras!!.getString("PrinterPath")!!
+        isMobile = intent.extras!!.getString("isMobile")!!.toBoolean()
         //заполним заново товар и док
         GetItemAndDocSet()
         val label: TextView = findViewById(R.id.label)
@@ -97,6 +99,29 @@ class Correct : BarcodeDataReceiver() {
             enterCountCorrect.visibility = View.VISIBLE
             NoQRCode.isFocusable = false
             flagBtn = 1
+        }
+
+        //дабы не дублировать код будем эмулировать нажатие кнопки
+        btnDefect.setOnClickListener {
+            btnShortage.visibility = View.INVISIBLE
+            btnRejection.visibility = View.INVISIBLE
+            btnDefect.isFocusable = false
+            ChoiseCorrect = 1
+            enterCountCorrect()
+        }
+        btnShortage.setOnClickListener {
+            btnDefect.visibility = View.INVISIBLE
+            btnRejection.visibility = View.INVISIBLE
+            btnShortage.isFocusable = false
+            ChoiseCorrect = 2
+            enterCountCorrect()
+        }
+        btnRejection.setOnClickListener {
+            btnDefect.visibility = View.INVISIBLE
+            btnShortage.visibility = View.INVISIBLE
+            btnRejection.isFocusable = false
+            ChoiseCorrect = 3
+            enterCountCorrect()
         }
 
     }
@@ -140,7 +165,7 @@ class Correct : BarcodeDataReceiver() {
         }
     }
 
-    fun GetItemAndDocSet(): Boolean {
+    private fun GetItemAndDocSet(): Boolean {
         var Query =
             "DECLARE @curdate DateTime; " +
                     "SELECT @curdate = DATEADD(DAY, 1 - DAY(curdate), curdate) FROM _1ssystem (nolock); " +
@@ -256,6 +281,7 @@ class Correct : BarcodeDataReceiver() {
         // нажали назад, вернемся на форму набора
         if (keyCode == 4) {
            if (ChoiseCorrect == 0) {
+               PreviousAction.text = ""
                val SetInitialization = Intent(this, SetInitialization::class.java)
                SetInitialization.putExtra("Employer", Employer)
                SetInitialization.putExtra("EmployerIDD", EmployerIDD)
@@ -268,6 +294,7 @@ class Correct : BarcodeDataReceiver() {
                SetInitialization.putExtra("PreviousAction", PreviousAction.text.toString())
                SetInitialization.putExtra("terminalView", terminalView.text)
                SetInitialization.putExtra("CountFact", CountFact.toString())
+               SetInitialization.putExtra("isMobile",isMobile.toString())
                startActivity(SetInitialization)
                finish()
            }
@@ -277,103 +304,110 @@ class Correct : BarcodeDataReceiver() {
         return super.onKeyDown(keyCode, event)
     }
 
-    fun ReactionKey(keyCode: Int, event: KeyEvent?) {
+    private fun ReactionKey(keyCode: Int, event: KeyEvent?) {
 
         if (keyCode in 8..10) {
 
             ChoiseCorrect = 0
-            enterCountCorrect.visibility = View.VISIBLE
             // нажали 1 - брак
             if (keyCode.toString() == "8") {
-                choise2.visibility = View.INVISIBLE
-                choise3.visibility = View.INVISIBLE
+                btnShortage.visibility = View.INVISIBLE
+                btnRejection.visibility = View.INVISIBLE
+                btnDefect.isFocusable = false
                 ChoiseCorrect = 1
             }
             // нажали 2 - недостача
             if (keyCode.toString() == "9") {
-                choise.visibility = View.INVISIBLE
-                choise3.visibility = View.INVISIBLE
+                btnDefect.visibility = View.INVISIBLE
+                btnRejection.visibility = View.INVISIBLE
+                btnShortage.isFocusable = false
                 ChoiseCorrect = 2
             }
             // нажали 3 - отказ
             if (keyCode.toString() == "10") {
-                choise.visibility = View.INVISIBLE
-                choise2.visibility = View.INVISIBLE
+                btnDefect.visibility = View.INVISIBLE
+                btnShortage.visibility = View.INVISIBLE
+                btnRejection.isFocusable = false
                 ChoiseCorrect = 3
             }
-            PreviousAction.text = "Укажите количество в штуках"
-            enterCountCorrect.setOnKeyListener { v: View, keyCode: Int, event ->
-                if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_ENTER) {
-                    try {
-                        if (flagBtn == 0) {
-                            EnterCount = enterCountCorrect.getText().toString().toInt()
-                            if (EnterCount > CCItem!!.Count || EnterCount > (CCItem!!.Count - CountFact)) {
-                                PreviousAction.text = "Нельзя скорректировать столько! "
-                                if (EnterCount > (CCItem!!.Count - CountFact)) {
-                                    PreviousAction.text =
-                                        "Нельзя скорректировать столько! Возможно: " + (CCItem!!.Count - CountFact).toString() + " шт"
-                                }
-                            } else {
-                                //проверим есть ли маркировка
-                                val TextQuery =
-                                    "SELECT " +
-                                            "Product.SP1036, Product.descr, Product.SP1436 " +
-                                            "FROM " +
-                                            "SC33 as Product " +
-                                            "INNER JOIN SC1434 as Categories " +
-                                            "ON Categories.id = Product.SP1436 " +
-                                            "WHERE " +
-                                            "Product.id = '${CCItem!!.ID}' and Categories.SP7268 = 1"
-
-                                val DT = SS.ExecuteWithRead(TextQuery)
-
-                                //есть маркировка, пусть сканируют QR-code
-                                if (DT!!.isNotEmpty()) {
-                                    flagMark = 1
-                                    PreviousAction.text = "Отсканируйте QR - код! (Осталось: " + (EnterCount - countCorrect).toString() + " шт)"
-                                    enterCountCorrect.visibility = View.INVISIBLE
-                                    //без QR - кода можно корректировать только при недостачи
-                                    if(choise2.isVisible) {
-                                        NoQRCode.visibility = View.VISIBLE
-                                    }
-
-                                } else {
-                                    //if (countCorrect == EnterCount) {
-                                        countCorrect = EnterCount
-                                        CompleteCorrect(ChoiseCorrect, countCorrect)
-                                   // }
-                                }
-                            }
-                        } else {
-                            //нажали кн "без QR - кода "
-                            EnterCountWithoutQRCode = enterCountCorrect.getText().toString().toInt()
-                            if (EnterCountWithoutQRCode > EnterCount - countCorrect) {
-                                PreviousAction.text =
-                                    "Нельзя скорректировать столько! Возможно: " + (EnterCount - countCorrect).toString() + " шт"
-
-                            } else {
-                                flagBtn = 0
-                                enterCountCorrect.visibility = View.INVISIBLE
-                                countWithoutQRCode += EnterCountWithoutQRCode
-                                countCorrect += EnterCountWithoutQRCode
-                                if (countCorrect == EnterCount) {
-                                    //все позиций скорректированы, завершим корректировку
-                                    CompleteCorrect(ChoiseCorrect, countCorrect)
-                                }
-                                PreviousAction.text = "Корректировка принята " + CCItem!!.InvCode.trim() + " - " + countCorrect.toString() + " шт. ( Осталось: " + (EnterCount - countCorrect).toString() + ") Отсканируйте QR - код!"
-                            }
-                        }
-
-                    } catch (e: Exception) {
-
-                    }
-                }
-                false
-            }
+            enterCountCorrect()
         }
     }
 
-    fun CompleteCorrect(Choise: Int, CountCorrect: Int): Boolean {
+    private fun enterCountCorrect(){
+        enterCountCorrect.visibility = View.VISIBLE
+        PreviousAction.text = "Укажите количество в штуках"
+        enterCountCorrect.setOnKeyListener { v: View, keyCode: Int, event ->
+            if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_ENTER) {
+                try {
+                    if (flagBtn == 0) {
+                        EnterCount = enterCountCorrect.getText().toString().toInt()
+                        if (EnterCount > CCItem!!.Count || EnterCount > (CCItem!!.Count - CountFact)) {
+                            PreviousAction.text = "Нельзя скорректировать столько! "
+                            if (EnterCount > (CCItem!!.Count - CountFact)) {
+                                PreviousAction.text =
+                                    "Нельзя скорректировать столько! Возможно: " + (CCItem!!.Count - CountFact).toString() + " шт"
+                            }
+                        } else {
+                            //проверим есть ли маркировка
+                            val TextQuery =
+                                "SELECT " +
+                                        "Product.SP1036, Product.descr, Product.SP1436 " +
+                                        "FROM " +
+                                        "SC33 as Product " +
+                                        "INNER JOIN SC1434 as Categories " +
+                                        "ON Categories.id = Product.SP1436 " +
+                                        "WHERE " +
+                                        "Product.id = '${CCItem!!.ID}' and Categories.SP7268 = 1"
+
+                            val DT = SS.ExecuteWithRead(TextQuery)
+
+                            //есть маркировка, пусть сканируют QR-code
+                            if (DT!!.isNotEmpty()) {
+                                flagMark = 1
+                                PreviousAction.text = "Отсканируйте QR - код! (Осталось: " + (EnterCount - countCorrect).toString() + " шт)"
+                                enterCountCorrect.visibility = View.INVISIBLE
+                                //без QR - кода можно корректировать только при недостачи
+                                if(btnShortage.isVisible) {
+                                    NoQRCode.visibility = View.VISIBLE
+                                }
+
+                            } else {
+                                //if (countCorrect == EnterCount) {
+                                countCorrect = EnterCount
+                                CompleteCorrect(ChoiseCorrect, countCorrect)
+                                // }
+                            }
+                        }
+                    } else {
+                        //нажали кн "без QR - кода "
+                        EnterCountWithoutQRCode = enterCountCorrect.getText().toString().toInt()
+                        if (EnterCountWithoutQRCode > EnterCount - countCorrect) {
+                            PreviousAction.text =
+                                "Нельзя скорректировать столько! Возможно: " + (EnterCount - countCorrect).toString() + " шт"
+
+                        } else {
+                            flagBtn = 0
+                            enterCountCorrect.visibility = View.INVISIBLE
+                            countWithoutQRCode += EnterCountWithoutQRCode
+                            countCorrect += EnterCountWithoutQRCode
+                            if (countCorrect == EnterCount) {
+                                //все позиций скорректированы, завершим корректировку
+                                CompleteCorrect(ChoiseCorrect, countCorrect)
+                            }
+                            PreviousAction.text = "Корректировка принята " + CCItem!!.InvCode.trim() + " - " + countCorrect.toString() + " шт. ( Осталось: " + (EnterCount - countCorrect).toString() + ") Отсканируйте QR - код!"
+                        }
+                    }
+
+                } catch (e: Exception) {
+
+                }
+            }
+            false
+        }
+    }
+
+    private fun CompleteCorrect(Choise: Int, CountCorrect: Int): Boolean {
         //Заглушка, рефрешим позицию, чтобы не было проблем, если оборвется связь
 //        if (!ToModeSet(CCItem.AdressID, DocSet.ID))
 //        {
@@ -483,6 +517,7 @@ class Correct : BarcodeDataReceiver() {
         SetInitialization.putExtra("PrinterPath", PrinterPath)
         SetInitialization.putExtra("PreviousAction", PreviousAction.text.toString())
         SetInitialization.putExtra("terminalView", terminalView.text)
+        SetInitialization.putExtra("isMobile",isMobile.toString())
         SetInitialization.putExtra("CountFact", CountFact.toString())
         startActivity(SetInitialization)
         finish()

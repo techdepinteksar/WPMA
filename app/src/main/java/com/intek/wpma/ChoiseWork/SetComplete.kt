@@ -37,6 +37,7 @@ class SetComplete : BarcodeDataReceiver() {
     var Barcode: String = ""
     var Places = 0
     var PrinterPath = ""
+    var isMobile = false    //флаг мобильного устройства
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,6 +50,7 @@ class SetComplete : BarcodeDataReceiver() {
         EmployerID = intent.extras!!.getString("EmployerID")!!
         PrinterPath = intent.extras!!.getString("PrinterPath")!!
         terminalView.text = intent.extras!!.getString("terminalView")!!
+        isMobile = intent.extras!!.getString("isMobile")!!.toBoolean()
         ANDROID_ID = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
         title = Employer
 
@@ -183,6 +185,7 @@ class SetComplete : BarcodeDataReceiver() {
             SetInitialization.putExtra("EmployerID", EmployerID)
             SetInitialization.putExtra("PrinterPath", PrinterPath)
             SetInitialization.putExtra("terminalView",terminalView.text.trim())
+            SetInitialization.putExtra("isMobile",isMobile.toString())
             SetInitialization.putExtra("ParentForm", "SetComplete")
             startActivity(SetInitialization)
             finish()
@@ -204,6 +207,7 @@ class SetComplete : BarcodeDataReceiver() {
         SetInitialization.putExtra("EmployerID", EmployerID)
         SetInitialization.putExtra("PrinterPath", PrinterPath)
         SetInitialization.putExtra("terminalView",terminalView.text.trim())
+        SetInitialization.putExtra("isMobile",isMobile.toString())
         SetInitialization.putExtra("ParentForm", "SetComplete")
         startActivity(SetInitialization)
         finish()
@@ -217,7 +221,12 @@ class SetComplete : BarcodeDataReceiver() {
         return super.onKeyDown(keyCode, event)
     }
 
-    fun ReactionKey(keyCode: Int, event: KeyEvent?) {
+    private fun ReactionKey(keyCode: Int, event: KeyEvent?) {
+
+        // нажали назад, выйдем и разблокируем доки
+        if (keyCode == 4){
+
+        }
 
         enterCountPlace.setOnKeyListener { v: View, keyCode: Int, event ->
             if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_ENTER) {

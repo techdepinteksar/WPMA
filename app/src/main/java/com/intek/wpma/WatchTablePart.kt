@@ -38,6 +38,7 @@ class WatchTablePart : BarcodeDataReceiver() {
     var CountFact: Int = 0
     var PrinterPath = ""
     var codeId:String = ""  //показатель по которому можно различать типы штрих-кодов
+    var isMobile = false    //флаг мобильного устройства
 
     val barcodeDataReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -76,6 +77,7 @@ class WatchTablePart : BarcodeDataReceiver() {
         terminalView.text = intent.extras!!.getString("terminalView")!!
         CountFact = intent.extras!!.getString("CountFact")!!.toInt()
         PrinterPath = intent.extras!!.getString("PrinterPath")!!
+        isMobile = intent.extras!!.getString("isMobile")!!.toBoolean()
         title = Employer
 
         //строка с шапкой
@@ -143,6 +145,7 @@ class WatchTablePart : BarcodeDataReceiver() {
             SetInitialization.putExtra("PrinterPath",PrinterPath)
             SetInitialization.putExtra("terminalView",terminalView.text)
             SetInitialization.putExtra("CountFact",CountFact.toString())
+            SetInitialization.putExtra("isMobile",isMobile.toString())
             SetInitialization.putExtra("ParentForm","WatchTablePart")
             startActivity(SetInitialization)
             finish()
@@ -153,8 +156,8 @@ class WatchTablePart : BarcodeDataReceiver() {
         return super.onKeyDown(keyCode, event)
     }
 
-    @SuppressLint("SetTextI18n")
-    fun getTablePart(iddoc: String): Boolean{
+
+    private fun getTablePart(iddoc: String): Boolean{
         var TextQuery =
             "select " +
                     "DocCC.lineno_ as Number, " +

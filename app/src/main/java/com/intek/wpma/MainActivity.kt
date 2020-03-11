@@ -1,29 +1,28 @@
 package com.intek.wpma
 
-import android.content.*
-import androidx.appcompat.app.AppCompatActivity
-import android.os.Bundle
-import kotlinx.android.synthetic.main.activity_main.*
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
+import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
-import android.view.KeyEvent
+import android.view.View
 import android.widget.TextView
 import android.widget.Toast
-import androidx.core.content.ContextCompat.startActivity
-import com.intek.wpma.Model.Model
-import com.intek.wpma.SQL.SQL1S
-import kotlinx.android.synthetic.main.activity_menu.*
+import kotlinx.android.synthetic.main.activity_main.*
 import java.math.BigInteger
-import java.sql.Connection
-import java.text.SimpleDateFormat
-import java.util.*
-import kotlinx.android.synthetic.main.activity_main.terminalView
 
 class MainActivity :  BarcodeDataReceiver() {
 
+    var EmployerID: String  = ""
+    var Employer: String = ""
+    var EmployerFlags: String = ""
+    var EmployerIDD: String = ""
     var Barcode: String = ""
     var codeId:String = ""  //показатель по которому можно различать типы штрих-кодов
+    var isMobile = false    //флаг мобильного устройства
 
 
     private var textView: TextView? = null
@@ -40,11 +39,7 @@ class MainActivity :  BarcodeDataReceiver() {
                         reactionBarcode(Barcode)
                     }
                     catch (e: Exception){
-                        val toast = Toast.makeText(
-                            applicationContext,
-                            "Отсутствует соединение с базой!",
-                            Toast.LENGTH_LONG
-                        )
+                        val toast = Toast.makeText(applicationContext, "Отсутствует соединение с базой!", Toast.LENGTH_LONG)
                         toast.show()
                     }
                 }
@@ -58,6 +53,16 @@ class MainActivity :  BarcodeDataReceiver() {
         sdkVersion = Build.VERSION.SDK_INT
         ANDROID_ID =  Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
         tsdNumVers.text = tsdVers
+        if(checkCameraHardware(this)) {
+            isMobile = true
+            btnScanMainAct.visibility = View.VISIBLE
+            btnScanMainAct!!.setOnClickListener {
+                val ScanAct = Intent(this@MainActivity, ScanActivity::class.java)
+                ScanAct.putExtra("ParentForm","MainActivity")
+                startActivity(ScanAct)
+            }
+        }
+
         // получим номер терминала
         val TextQuery =
             "SELECT " +
@@ -66,7 +71,7 @@ class MainActivity :  BarcodeDataReceiver() {
                     "SC5096 " +
                     "WHERE " +
                     "descr = '${ANDROID_ID}'"
-        var DataTable: Array<Array<String>>? = SS.ExecuteWithRead(TextQuery)
+        val DataTable: Array<Array<String>>? = SS.ExecuteWithRead(TextQuery)
         if (DataTable!!.isEmpty()){
             val toast = Toast.makeText(applicationContext, "Терминал не опознан!", Toast.LENGTH_SHORT)
             toast.show()
@@ -74,6 +79,10 @@ class MainActivity :  BarcodeDataReceiver() {
         }
         terminal = DataTable!![1][0]
         terminalView.text = terminal
+    }
+
+    companion object {
+        var scanRes: String? = null
     }
 
     private fun setText(text: String) {
@@ -86,37 +95,53 @@ class MainActivity :  BarcodeDataReceiver() {
         //расшифруем IDD
         //ИДД = "99990" + СокрЛП(Сред(ШК,3,2)) + "00" + Сред(ШК,5,8);
         //99990010010982023
-        val EmployerIDD: String = "99990" + Barcode.substring(2, 4) + "00" + Barcode.substring(4, 12)
-        var EmployerID: String
-        var Employer: String
-        var EmployerFlags: String
+        //Это перелогин или первый логин
+        if (EmployerIDD != "" && EmployerIDD == "99990" + Barcode.substring(2, 4) + "00" + Barcode.substring(4, 12)) {
+            if (!Logout(EmployerID)) {
+                resLbl.text = "Ошибка выхода из системы!"
+                return
+            }
+            val Main = Intent(this, MainActivity::class.java)
+            startActivity(Main)
+            finish()
+            return
+        }
+        if (EmployerIDD == "" || EmployerIDD != "99990" + Barcode.substring(2, 4) + "00" + Barcode.substring(4, 12)) {
+            if(EmployerIDD != "99990" + Barcode.substring(2, 4) + "00" + Barcode.substring(4, 12) && EmployerIDD != "") {
+                if (!Logout(EmployerID)) {
+                    resLbl.text = "Ошибка выхода из системы!"
+                    return
+                }
+            }
+            EmployerIDD = "99990" + Barcode.substring(2, 4) + "00" + Barcode.substring(4, 12)
 
-        val TextQuery: String =
-            "Select top 1 descr, SC838.SP4209, ID From SC838 (nolock) WHERE SP1933 = '" + EmployerIDD + "'"
-        val DataTable = SS.ExecuteWithRead(TextQuery)
-        if (DataTable== null) {
-            actionLbl.text = SS.ExcStr
-            return
-        }
-        else if (DataTable.isEmpty()){
-            actionLbl.text = "Нет действий с ШК в данном режиме!"
-            return
-        }
+            val TextQuery: String =
+                "Select top 1 descr as Descr, SC838.SP4209 as Settings, ID as ID From SC838 (nolock) WHERE SP1933 = '" + EmployerIDD + "'"
+            val DataTable = SS.ExecuteWithRead(TextQuery)
+            if (DataTable == null) {
+                actionLbl.text = SS.ExcStr
+                return
+            } else if (DataTable.isEmpty()) {
+                actionLbl.text = "Нет действий с ШК в данном режиме!"
+                return
+            }
 
-        Employer = DataTable!!?.get(1)[0].trim()
-        EmployerFlags = DataTable[1][1]
-        EmployerID = DataTable[1][2]
-        //инициализация входа
-        if(!Login(EmployerID)) {
-            actionLbl.text = "Ошибка входа в систему!"
-            return
+            Employer = DataTable!!?.get(1)[0].trim()
+            EmployerFlags = DataTable[1][1]
+            EmployerID = DataTable[1][2]
+            //инициализация входа
+            if (!Login(EmployerID)) {
+                actionLbl.text = "Ошибка входа в систему!"
+                return
+            }
+            //конвертнем настройки сотрудника в 2ую сс
+            var bigInteger: BigInteger = EmployerFlags.toBigInteger()
+            EmployerFlags = bigInteger.toString(2)
         }
-        //конвертнем настройки сотрудника в 2ую сс
-        var bigInteger: BigInteger = EmployerFlags.toBigInteger()
-        EmployerFlags = bigInteger.toString(2)
 
         if (Employer != "") {
             actionLbl.text = Employer
+            scanRes = null
             val Menu = Intent(this, Menu::class.java)
             Menu.putExtra("Employer", Employer)
             Menu.putExtra("EmployerIDD",EmployerIDD)
@@ -124,31 +149,12 @@ class MainActivity :  BarcodeDataReceiver() {
             Menu.putExtra("EmployerID",EmployerID)
             Menu.putExtra("terminalView",terminal)
             Menu.putExtra("ParentForm","MainActivity")
+            Menu.putExtra("isMobile",isMobile.toString())
             startActivity(Menu)
         } else
             actionLbl.text = "Нет действий с этим ШК в данном режиме"
     }
-    fun Login(EmployerID: String): Boolean {
-//        if (!SS.UpdateProgram())
-//        {
-//            return false
-//        }
-//        if (!SS.SynhDateTime())
-//        {
-//            return false
-//        }
-        if (!IBS_Inicialization(EmployerID)) {
-            return false
-        }
 
-        var DataMapWrite: MutableMap<String, Any> = mutableMapOf()
-        DataMapWrite["Спр.СинхронизацияДанных.ДатаСпрВход1"] = SS.ExtendID(EmployerID, "Спр.Сотрудники")
-        DataMapWrite["Спр.СинхронизацияДанных.ДатаВход1"] = ANDROID_ID
-        if (!ExecCommandNoFeedback("Login", DataMapWrite)) {
-            return false
-        }
-        return true
-    }
 
     override fun onResume() {
         super.onResume()
@@ -156,6 +162,15 @@ class MainActivity :  BarcodeDataReceiver() {
         registerReceiver(barcodeDataReceiver, IntentFilter(ACTION_BARCODE_DATA))
         claimScanner()
         Log.d("IntentApiSample: ", "onResume")
+        if(scanRes != null){
+            try {
+                reactionBarcode(scanRes.toString())
+            }
+            catch (e: Exception){
+                val toast = Toast.makeText(applicationContext, "Отсутствует соединение с базой!", Toast.LENGTH_LONG)
+                toast.show()
+            }
+        }
     }
 
     override fun onPause() {

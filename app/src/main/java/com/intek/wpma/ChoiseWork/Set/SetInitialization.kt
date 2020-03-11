@@ -8,7 +8,9 @@ import android.content.IntentFilter
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
+import android.view.GestureDetector
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
 import android.view.View.INVISIBLE
 import android.view.View.VISIBLE
@@ -18,17 +20,16 @@ import android.widget.Toast
 import androidx.core.view.isVisible
 import com.intek.wpma.*
 import com.intek.wpma.ChoiseWork.SetComplete
+import com.intek.wpma.Helpers.Helper
 import com.intek.wpma.Model.Model
 import kotlinx.android.synthetic.main.activity_set.*
-import com.intek.wpma.Helpers.Helper
-import kotlinx.android.synthetic.main.activity_set.terminalView
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.text.SimpleDateFormat
 import java.util.*
 
 
-class SetInitialization : BarcodeDataReceiver() {
+class SetInitialization : BarcodeDataReceiver(), View.OnTouchListener {
 
 
     val helper = Helper()
@@ -56,6 +57,7 @@ class SetInitialization : BarcodeDataReceiver() {
     var CurrLine: Int = 0
     var PrinterPath = ""    //сюда будем запоминать принтер после завершения набора, чтобы постоянно не сканировать
     var codeId:String = ""  //показатель по которому можно различать типы штрих-кодов
+    var isMobile = false    //флаг мобильного устройства
 
     val barcodeDataReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -88,6 +90,7 @@ class SetInitialization : BarcodeDataReceiver() {
         EmployerFlags = intent.extras!!.getString("EmployerFlags")!!
         EmployerIDD = intent.extras!!.getString("EmployerIDD")!!
         EmployerID = intent.extras!!.getString("EmployerID")!!
+        isMobile = intent.extras!!.getString("isMobile")!!.toBoolean()
         ParentForm = intent.extras!!.getString("ParentForm")!!
         super.ANDROID_ID = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
         terminalView.text = intent.extras!!.getString("terminalView")!!
@@ -124,6 +127,42 @@ class SetInitialization : BarcodeDataReceiver() {
                 toast.show()
             }
         }
+        if (isMobile){
+            btnScanSetMode.visibility = View.VISIBLE
+            btnScanSetMode!!.setOnClickListener {
+                val ScanAct = Intent(this@SetInitialization, ScanActivity::class.java)
+                ScanAct.putExtra("ParentForm","SetInitialization")
+                startActivity(ScanAct)
+            }
+        }
+        correct.setOnClickListener {
+            if (CurrentAction != Global.ActionSet.EnterCount && !DocSet!!.Special){
+                // перейдем на форму корректировки
+                val Correct = Intent(this, Correct::class.java)
+                Correct.putExtra("Employer", Employer)
+                Correct.putExtra("EmployerIDD", EmployerIDD)
+                Correct.putExtra("EmployerFlags", EmployerFlags)
+                Correct.putExtra("EmployerID", EmployerID)
+                Correct.putExtra("iddoc", DocSet!!.ID)
+                Correct.putExtra("AddressID", CCItem!!.AdressID)
+                Correct.putExtra("terminalView",terminalView.text.trim())
+                Correct.putExtra("PrinterPath", PrinterPath)
+                Correct.putExtra("CountFact",CountFact.toString())
+                Correct.putExtra("isMobile",isMobile.toString())
+                startActivity(Correct)
+                finish()
+            }
+        }
+
+    }
+
+    companion object {
+        var scanRes: String? = null
+    }
+
+    fun onSwipeRight() {
+        val toast = Toast.makeText(applicationContext, "Swipe вправо!", Toast.LENGTH_SHORT)
+        toast.show()
     }
 
     fun ToModeSetInicialization(): Boolean {
@@ -753,6 +792,11 @@ class SetInitialization : BarcodeDataReceiver() {
             }
             return true
         }
+        //нужно сканировать маркировку, а сканиуруют что-то другое
+        if (CurrentAction == Global.ActionSet.ScanQRCode && codeId != BarcodeId){
+            FExcStr.text = "Неверно! " + WhatUNeed()
+            return false
+        }
         if (CurrentAction == Global.ActionSet.ScanItem) {
             TextQuery =
                 "SELECT " +
@@ -1035,6 +1079,10 @@ class SetInitialization : BarcodeDataReceiver() {
         return super.onKeyDown(keyCode, event)
     }
 
+    override fun onTouch(v: View?, event: MotionEvent?): Boolean {
+        onSwipeRight()
+        return true
+    }
 
     fun ReactionKey(keyCode: Int, event: KeyEvent?) {
 
@@ -1082,23 +1130,11 @@ class SetInitialization : BarcodeDataReceiver() {
             WatchForm.putExtra("terminalView",terminalView.text.trim())
             WatchForm.putExtra("CountFact",CountFact.toString())
             WatchForm.putExtra("PrinterPath", PrinterPath)
-
+            WatchForm.putExtra("isMobile",isMobile.toString())
             startActivity(WatchForm)
             finish()
 
         }
-//        else if (Key == Keys.Left && Screan == -1)
-//        {
-//            DataGrid dgGoodsCC = pnlCurrent.GetDataGridByName("dgGoodsCC");
-//            CurrLineSet = dgGoodsCC.CurrentRowIndex;
-//            pnlCurrent.Sweep(1);
-//            Screan += 1;
-//            TextBox tbCount = pnlCurrent.GetTextBoxByName("tbCount");
-//            if (tbCount.Visible)
-//            {
-//                pnlCurrent.GetControlByName("tbCount").Focus();
-//            }
-//        }
 
         if (keyCode == 16 && CurrentAction != Global.ActionSet.EnterCount && !DocSet!!.Special) {
 //            if (SS.Const.StopCorrect)
@@ -1118,6 +1154,7 @@ class SetInitialization : BarcodeDataReceiver() {
             Correct.putExtra("terminalView",terminalView.text.trim())
             Correct.putExtra("PrinterPath", PrinterPath)
             Correct.putExtra("CountFact",CountFact.toString())
+            Correct.putExtra("isMobile",isMobile.toString())
             startActivity(Correct)
             finish()
         }
@@ -1253,6 +1290,7 @@ class SetInitialization : BarcodeDataReceiver() {
         SetComplete.putExtra("EmployerFlags", EmployerFlags)
         SetComplete.putExtra("EmployerID", EmployerID)
         SetComplete.putExtra("terminalView", terminalView.text.trim())
+        SetComplete.putExtra("isMobile",isMobile.toString())
         SetComplete.putExtra("PrinterPath", PrinterPath)
         //закроем доки, висящие на сотруднике с уже набранными строчками
         for (id in DocsSet) {
@@ -1397,6 +1435,15 @@ class SetInitialization : BarcodeDataReceiver() {
         registerReceiver(barcodeDataReceiver, IntentFilter(ACTION_BARCODE_DATA))
         claimScanner()
         Log.d("IntentApiSample: ", "onResume")
+        if(scanRes != null){
+            try {
+                reactionBarcode(scanRes.toString())
+            }
+            catch (e: Exception){
+                val toast = Toast.makeText(applicationContext, "Не удалось отсканировать штрихкод!", Toast.LENGTH_LONG)
+                toast.show()
+            }
+        }
     }
 
     override fun onPause() {
@@ -1405,6 +1452,8 @@ class SetInitialization : BarcodeDataReceiver() {
         releaseScanner()
         Log.d("IntentApiSample: ", "onPause")
     }
+
+
 
 
 }
