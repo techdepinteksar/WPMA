@@ -269,6 +269,19 @@ open abstract class BarcodeDataReceiver: AppCompatActivity() {
 
     }
 
+    fun LockoutDoc(IDDoc: String): Boolean {
+        return IBS_Lockuot("int_doc_$IDDoc")
+    }
+
+    fun IBS_Lockuot(BlockText: String): Boolean {
+        var TextQuery = "exec IBS_Lockout :BlockText"
+        TextQuery = SS.QuerySetParam(TextQuery, "BlockText", BlockText)
+        if (!SS.ExecuteWithoutRead(TextQuery)) {
+            return false
+        }
+        return true
+    }
+
      fun checkCameraHardware(context: Context): Boolean {
          return context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)
     }

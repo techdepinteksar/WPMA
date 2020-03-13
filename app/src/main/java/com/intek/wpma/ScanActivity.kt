@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.google.zxing.Result
 import com.intek.wpma.ChoiseWork.Set.SetInitialization
+import com.intek.wpma.ChoiseWork.SetComplete
 import me.dm7.barcodescanner.zxing.ZXingScannerView
 
     var ParentForm: String = ""
@@ -40,10 +41,24 @@ class ScanActivity: AppCompatActivity(), ZXingScannerView.ResultHandler {
         // Do something with the result here
         // Log.v("tag", rawResult.getText()); // Prints scan results
         // Log.v("tag", rawResult.getBarcodeFormat().toString()); // Prints the scan format (qrcode, pdf417 etc.)
+        var codeId: String = ""
+        when (rawResult.barcodeFormat.toString()){
+            "DATA_MATRIX"   -> codeId = "w"
+            "CODE_128"      -> codeId = "j"
+            "EAN_13"        -> codeId = "d"
+            "UPC_E"         -> codeId = "D"
+            "QR_CODE"       -> codeId = "s"
+        }
 
         when(ParentForm){
-            "MainActivity" -> MainActivity.scanRes = rawResult.text
-            "SetInitialization" -> SetInitialization.scanRes = rawResult.text
+            "MainActivity"      -> {MainActivity.scanRes = rawResult.text
+                                    MainActivity.scanCodeId = codeId}
+            "SetInitialization" -> {SetInitialization.scanRes = rawResult.text
+                                    SetInitialization.scanCodeId = codeId}
+            "Correct"           -> {Correct.scanRes = rawResult.text
+                                    Correct.scanCodeId = codeId}
+            "SetComplete"       -> {SetComplete.scanRes = rawResult.text
+                                    SetComplete.scanCodeId = codeId}
         }
 
 

@@ -71,7 +71,15 @@ class MainActivity :  BarcodeDataReceiver() {
                     "SC5096 " +
                     "WHERE " +
                     "descr = '${ANDROID_ID}'"
-        val DataTable: Array<Array<String>>? = SS.ExecuteWithRead(TextQuery)
+        var DataTable: Array<Array<String>>
+        try {
+            DataTable = SS.ExecuteWithRead(TextQuery)!!
+        }
+        catch (e: Exception) {
+            val toast = Toast.makeText(applicationContext, "Не удалось подключиться к базе!", Toast.LENGTH_SHORT)
+            toast.show()
+            return
+        }
         if (DataTable!!.isEmpty()){
             val toast = Toast.makeText(applicationContext, "Терминал не опознан!", Toast.LENGTH_SHORT)
             toast.show()
@@ -83,6 +91,7 @@ class MainActivity :  BarcodeDataReceiver() {
 
     companion object {
         var scanRes: String? = null
+        var scanCodeId: String? = null
     }
 
     private fun setText(text: String) {
@@ -101,6 +110,7 @@ class MainActivity :  BarcodeDataReceiver() {
                 resLbl.text = "Ошибка выхода из системы!"
                 return
             }
+            scanRes = null      //если выходят с телефона, переприсвоим
             val Main = Intent(this, MainActivity::class.java)
             startActivity(Main)
             finish()
@@ -164,7 +174,9 @@ class MainActivity :  BarcodeDataReceiver() {
         Log.d("IntentApiSample: ", "onResume")
         if(scanRes != null){
             try {
-                reactionBarcode(scanRes.toString())
+                Barcode = scanRes.toString()
+                codeId = scanCodeId.toString()
+                reactionBarcode(Barcode)
             }
             catch (e: Exception){
                 val toast = Toast.makeText(applicationContext, "Отсутствует соединение с базой!", Toast.LENGTH_LONG)

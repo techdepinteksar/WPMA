@@ -129,6 +129,8 @@ class WatchTablePart : BarcodeDataReceiver() {
         rowTitle.addView(linearLayout)
         table.addView(rowTitle)
         getTablePart(iddoc)
+
+        //scroll.setOnTouchListener(@this)
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {

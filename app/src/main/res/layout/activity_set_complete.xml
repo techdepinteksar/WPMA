@@ -6,6 +6,19 @@
     android:layout_height="match_parent"
     tools:context=".ChoiseWork.SetComplete">
 
+    <Button
+        android:id="@+id/btnScanSetComplete"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Scan"
+        android:visibility="invisible"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.987"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.715" />
+
     <TextView
         android:id="@+id/previousAction"
         android:layout_width="306dp"

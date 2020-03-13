@@ -19,6 +19,7 @@ import com.intek.wpma.ChoiseWork.Set.SetInitialization
 import com.intek.wpma.MainActivity
 import com.intek.wpma.R
 import com.intek.wpma.SQL.SQL1S
+import com.intek.wpma.ScanActivity
 import kotlinx.android.synthetic.main.activity_correct.*
 import kotlinx.android.synthetic.main.activity_set.*
 import kotlinx.android.synthetic.main.activity_set.PreviousAction
@@ -35,10 +36,31 @@ class SetComplete : BarcodeDataReceiver() {
     var EmployerIDD: String = ""
     var EmployerID: String = ""
     var Barcode: String = ""
-    var Places = 0
+    var codeId: String = ""             //показатель по которому можно различать типы штрих-кодов
+    var Places: Int? = null
     var PrinterPath = ""
     var isMobile = false    //флаг мобильного устройства
 
+    val barcodeDataReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            Log.d("IntentApiSample: ", "onReceive")
+            if (ACTION_BARCODE_DATA == intent.action) {
+                val version = intent.getIntExtra("version", 0)
+                if (version >= 1) {
+                    // ту прописываем что делать при событии сканирования
+                    try {
+                        Barcode = intent.getStringExtra("data")
+                        reactionBarcode(Barcode)
+                    }
+                    catch(e: Exception) {
+                        val toast = Toast.makeText(applicationContext, "Не удалось отсканировать штрихкод!", Toast.LENGTH_LONG)
+                        toast.show()
+                    }
+
+                }
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -104,27 +126,19 @@ class SetComplete : BarcodeDataReceiver() {
             false
         }
 
-    }
-
-    val barcodeDataReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            Log.d("IntentApiSample: ", "onReceive")
-            if (ACTION_BARCODE_DATA == intent.action) {
-                val version = intent.getIntExtra("version", 0)
-                if (version >= 1) {
-                    // ту прописываем что делать при событии сканирования
-                    try {
-                        Barcode = intent.getStringExtra("data")
-                        reactionBarcode(Barcode)
-                    }
-                    catch(e: Exception) {
-                        val toast = Toast.makeText(applicationContext, "Не удалось отсканировать штрихкод!", Toast.LENGTH_LONG)
-                        toast.show()
-                    }
-
-                }
+        if (isMobile){
+            btnScanSetComplete.visibility = View.VISIBLE
+            btnScanSetComplete!!.setOnClickListener {
+                val ScanAct = Intent(this@SetComplete, ScanActivity::class.java)
+                ScanAct.putExtra("ParentForm","SetComplete")
+                startActivity(ScanAct)
             }
         }
+    }
+
+    companion object {
+        var scanRes: String? = null
+        var scanCodeId: String? = null
     }
 
     private fun reactionBarcode(Barcode: String): Boolean {
@@ -153,6 +167,10 @@ class SetComplete : BarcodeDataReceiver() {
             FExcStr.text = "Не выбран принтер!"
             return false
         }
+        if (Places == null){
+            FExcStr.text = "Количество мест не указано!"
+            return false
+        }
         //подтянем адрес комплектации
         val TextQuery =
             "SELECT ID, SP3964, descr FROM SC1141 (nolock) WHERE SP1935= '$IDD'"
@@ -167,7 +185,7 @@ class SetComplete : BarcodeDataReceiver() {
         DataMapWrite["Спр.СинхронизацияДанных.ДокументВход"] = SS.ExtendID(DocSet, "КонтрольНабора")
         DataMapWrite["Спр.СинхронизацияДанных.ДатаСпрВход1"] = SS.ExtendID(EmployerID, "Спр.Сотрудники")
         DataMapWrite["Спр.СинхронизацияДанных.ДатаСпрВход2"] = SS.ExtendID(AddressID, "Спр.Секции")
-        DataMapWrite["Спр.СинхронизацияДанных.ДатаВход1"] = Places
+        DataMapWrite["Спр.СинхронизацияДанных.ДатаВход1"] = Places!!
         DataMapWrite["Спр.СинхронизацияДанных.ДатаВход2"] = PrinterPath
 
         var DataMapRead: MutableMap<String, Any> = mutableMapOf()
@@ -197,7 +215,7 @@ class SetComplete : BarcodeDataReceiver() {
         }
         FExcStr.text = DataMapRead["Спр.СинхронизацияДанных.ДатаРез1"].toString()
 
-        SetInit.LockoutDoc(DocSet)      //разблокируем доки
+        LockoutDoc(DocSet)      //разблокируем доки
 
         //вернемся обратно в SetInitialization
         val SetInitialization = Intent(this, SetInitialization::class.java)
@@ -252,6 +270,17 @@ class SetComplete : BarcodeDataReceiver() {
         registerReceiver(barcodeDataReceiver, IntentFilter(ACTION_BARCODE_DATA))
         claimScanner()
         Log.d("IntentApiSample: ", "onResume")
+        if(scanRes != null){
+            try {
+                Barcode = scanRes.toString()
+                codeId = scanCodeId.toString()
+                reactionBarcode(Barcode)
+            }
+            catch (e: Exception){
+                val toast = Toast.makeText(applicationContext, "Отсутствует соединение с базой!", Toast.LENGTH_LONG)
+                toast.show()
+            }
+        }
     }
 
     override fun onPause() {

@@ -14,10 +14,10 @@
         android:visibility="invisible"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.948"
+        app:layout_constraintHorizontal_bias="0.931"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.573" />
+        app:layout_constraintVertical_bias="0.591" />
 
     <TextView
         android:id="@+id/header"
@@ -97,17 +97,14 @@
         android:id="@+id/mainView"
         android:layout_width="230dp"
         android:layout_height="42dp"
-        android:layout_marginBottom="308dp"
         android:gravity="center"
         android:text="Для получения задания отбора - нажмите кнопку 1"
         android:textColor="#D12114"
         android:textSize="18sp"
-        app:layout_constraintBottom_toTopOf="@+id/FExcStr"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.177"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.041" />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/PreviousAction"
@@ -124,10 +121,10 @@
 
     <TextView
         android:id="@+id/InvCode"
-        android:layout_width="117dp"
-        android:layout_height="47dp"
+        android:layout_width="140dp"
+        android:layout_height="51dp"
         android:textColorHint="#000000"
-        android:textSize="22sp"
+        android:textSize="25sp"
         android:textStyle="bold"
         android:visibility="invisible"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -139,18 +136,18 @@
 
     <TextView
         android:id="@+id/item"
-        android:layout_width="197dp"
-        android:layout_height="91dp"
+        android:layout_width="173dp"
+        android:layout_height="106dp"
         android:gravity="left"
         android:textColor="#000000"
-        android:textSize="23sp"
+        android:textSize="18sp"
         android:visibility="invisible"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.975"
+        app:layout_constraintHorizontal_bias="0.965"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.409" />
+        app:layout_constraintVertical_bias="0.395" />
 
     <TextView
         android:id="@+id/details"

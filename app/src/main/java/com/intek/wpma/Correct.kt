@@ -123,7 +123,20 @@ class Correct : BarcodeDataReceiver() {
             ChoiseCorrect = 3
             enterCountCorrect()
         }
+        if (isMobile){
+            btnScanCorrect.visibility = View.VISIBLE
+            btnScanCorrect!!.setOnClickListener {
+                val ScanAct = Intent(this@Correct, ScanActivity::class.java)
+                ScanAct.putExtra("ParentForm","SetCorrect")
+                startActivity(ScanAct)
+            }
+        }
 
+    }
+
+    companion object {
+        var scanRes: String? = null
+        var scanCodeId: String? = null
     }
 
     private fun reactionBarcode(Barcode: String) {
@@ -532,6 +545,17 @@ class Correct : BarcodeDataReceiver() {
         registerReceiver(barcodeDataReceiver, IntentFilter(ACTION_BARCODE_DATA))
         claimScanner()
         Log.d("IntentApiSample: ", "onResume")
+        if(scanRes != null){
+            try {
+                Barcode = scanRes.toString()
+                codeId = scanCodeId.toString()
+                reactionBarcode(Barcode)
+            }
+            catch (e: Exception){
+                val toast = Toast.makeText(applicationContext, "Отсутствует соединение с базой!", Toast.LENGTH_LONG)
+                toast.show()
+            }
+        }
     }
 
     override fun onPause() {
