@@ -274,7 +274,7 @@ class ChoiseDown : BarcodeDataReceiver() {
         {
             return false
         }
-        return ToModeDown();
+        return ToModeDown()
     }
 
     fun ToModeDown():Boolean{
