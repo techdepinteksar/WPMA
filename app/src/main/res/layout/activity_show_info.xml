@@ -4,30 +4,34 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ChoiseWork.Set.WatchTablePart">
-
+    tools:context=".ChoiseWork.Shipping.ShowInfo">
 
     <TextView
         android:id="@+id/terminalView"
         android:layout_width="84dp"
-        android:layout_height="30dp"
-        android:layout_marginTop="32dp"
+        android:layout_height="31dp"
         android:textColor="#000000"
         android:textSize="16sp"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintHorizontal_bias="0.974"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.011" />
 
     <TextView
-        android:id="@+id/sum"
-        android:layout_width="85dp"
-        android:layout_height="31dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginLeft="16dp"
-        android:layout_marginTop="32dp"
-        android:textColor="#D12114"
-        android:textSize="18sp"
+        android:id="@+id/FExcStr"
+        android:layout_width="297dp"
+        android:layout_height="154dp"
+        android:gravity="center"
+        android:text="Ожидание команды"
+        android:textColor="#070AA0"
+        android:textSize="24sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.986" />
 
     <ScrollView
         android:id="@+id/scroll"
@@ -44,7 +48,8 @@
         <TableLayout
             android:id="@+id/table"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
+            android:clickable="true"
             android:gravity="center_horizontal"
             android:scrollbarAlwaysDrawHorizontalTrack="false"
             app:layout_constraintStart_toStartOf="parent"
@@ -57,21 +62,14 @@
 
                 <TableRow
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent">
-
-                    <TextView
-                        android:id="@+id/PreviousAction"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:gravity="center"
-                        android:text="PreviousAction"
-                        android:textColor="#000000"
-                        android:textSize="24sp" />
+                    android:layout_height="match_parent"
+                    android:clickable="false">
 
                 </TableRow>
             </LinearLayout>
 
         </TableLayout>
     </ScrollView>
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,8 +1,6 @@
 package com.intek.wpma.Helpers
 
-import java.io.File.separator
 import java.math.BigInteger
-import java.util.*
 
 class Helper {
     /*
@@ -25,38 +23,32 @@ class Helper {
         }
         return result;
     }
-    /// <summary>
+    */
     /// делает из полного имени формат типа: Иванов И.И.
-    /// </summary>
-    /// <param name="FIO"></param>
-    /// <returns></returns>
-    static public string GetShortFIO(string FIO)
+    fun GetShortFIO(FIO:String):String
     {
-        string result = "";
-        FIO = FIO.Trim();
-        bool space = false;
-        bool surname = false;
-        for (int i = 0; i < FIO.Length; i++)
+        var result = ""
+        var fio = FIO.trim()
+        var space = false
+        var surname = false
+        for (i in 0..fio.length-1)
         {
-            string ch = FIO.Substring(i, 1);
+            var ch = fio.substring(i, i+1);
             if (!surname)
             {
-                result += ch;
+                result += ch
             }
             if (space)
             {
-                result += ch + ".";
+                result += ch + "."
             }
-            surname = ch == " " ? true : surname;
-            space = ch == " " ? true : false;
+            surname = if (ch == " ") true else surname
+            space = ch == " "
         }
         return result;
     }
-    /// <summary>
-    ///
-    /// </summary>
-    /// <param name="Barcode"></param>
-    /// <returns></returns>
+
+    /*
     static public string GetIDD(string Barcode)
     {
         string IDD = "";
@@ -191,35 +183,34 @@ class Helper {
     */
     fun  StringToList(SourceStr: String, separator: String): MutableList<String>
     {
-        var SourceStr = SourceStr.replace(" ", "")
-        var result: MutableList<String>
-        result = emptyList<String>() as MutableList<String>
+        var sourceStr = SourceStr.replace(" ", "")
+        var result: MutableList<String> = mutableListOf()
         while (true)
         {
-            var index: Int = SourceStr.indexOf(separator)
+            var index: Int = sourceStr.indexOf(separator)
             index = if (index == -1) {
                 0
             } else {
                 index
             }
 
-            val thispart: String = SourceStr.substring(0, index)
+            val thispart: String = sourceStr.substring(0, index)
             if (thispart.isNotEmpty())
             {
                 result.add(thispart)
             }
             if (index > 0)
             {
-                SourceStr = SourceStr.substring(index + separator.length)
+                sourceStr = sourceStr.substring(index + separator.length)
             }
             else
             {
                 break
             }
         }
-        if (SourceStr.isNotEmpty())
+        if (sourceStr.isNotEmpty())
         {
-            result.add(SourceStr)
+            result.add(sourceStr)
         }
         return result
     }

@@ -1,11 +1,12 @@
 package com.intek.wpma
 
-import android.app.Activity
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.google.zxing.Result
+import com.intek.wpma.ChoiseWork.Set.Correct
 import com.intek.wpma.ChoiseWork.Set.SetInitialization
-import com.intek.wpma.ChoiseWork.SetComplete
+import com.intek.wpma.ChoiseWork.Set.SetComplete
+import com.intek.wpma.ChoiseWork.Shipping.*
 import me.dm7.barcodescanner.zxing.ZXingScannerView
 
     var ParentForm: String = ""
@@ -50,15 +51,43 @@ class ScanActivity: AppCompatActivity(), ZXingScannerView.ResultHandler {
             "QR_CODE"       -> codeId = "s"
         }
 
-        when(ParentForm){
-            "MainActivity"      -> {MainActivity.scanRes = rawResult.text
-                                    MainActivity.scanCodeId = codeId}
-            "SetInitialization" -> {SetInitialization.scanRes = rawResult.text
-                                    SetInitialization.scanCodeId = codeId}
-            "Correct"           -> {Correct.scanRes = rawResult.text
-                                    Correct.scanCodeId = codeId}
-            "SetComplete"       -> {SetComplete.scanRes = rawResult.text
-                                    SetComplete.scanCodeId = codeId}
+        when(ParentForm) {
+            "MainActivity" -> {
+                MainActivity.scanRes = rawResult.text
+                MainActivity.scanCodeId = codeId
+            }
+            "SetInitialization" -> {
+                SetInitialization.scanRes = rawResult.text
+                SetInitialization.scanCodeId = codeId
+            }
+            "Correct" -> {
+                Correct.scanRes = rawResult.text
+                Correct.scanCodeId = codeId
+            }
+            "SetComplete" -> {
+                SetComplete.scanRes = rawResult.text
+                SetComplete.scanCodeId = codeId
+            }
+            "Downing" -> {
+                Downing.scanRes = rawResult.text
+                Downing.scanCodeId = codeId
+            }
+            "UnLoading" -> {
+                UnLoading.scanRes = rawResult.text
+                UnLoading.scanCodeId = codeId
+            }
+            "Loading" -> {
+                Loading.scanRes = rawResult.text
+                Loading.scanCodeId = codeId
+            }
+            "ChiseDown" -> {
+                ChoiseDown.scanRes = rawResult.text
+                ChoiseDown.scanCodeId = codeId
+            }
+            "FreeComplectation" -> {
+                FreeComplectation.scanRes = rawResult.text
+                FreeComplectation.scanCodeId = codeId
+            }
         }
 
 
